@@ -30,6 +30,17 @@ services:
       - ./init-scripts/song-db:/docker-entrypoint-initdb.d # Places the init scripts in the container's init directory
     # networks:
     #  - microservices-net
+    
+  eureka-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    ports:
+      - "${EUREKA_SERVER_PORT}:${EUREKA_SERVER_PORT}"
+    environment:
+      SERVER_PORT: ${EUREKA_SERVER_PORT}
 
   resource-service:
     build:
@@ -39,7 +50,9 @@ services:
         - linux/amd64
     ports:
       - "${RESOURCE_SERVICE_SERVER_PORT}:${RESOURCE_SERVICE_SERVER_PORT}"
+      - "${RESOURCE_SERVICE_DEBUG_HOST_PORT}:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}" # for JVM debugging
     environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_RESOURCE_SERVICE}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD_RESOURCE_SERVICE}
@@ -55,9 +68,17 @@ services:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
+    # Uncomment in case of scaling with fixed ports! 
+#    deploy:
+#      replicas: 2
     ports:
       - "${SONG_SERVICE_SERVER_PORT}:${SONG_SERVICE_SERVER_PORT}"
+      - "${SONG_SERVICE_DEBUG_HOST_PORT}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
+      # Uncomment in case of scaling with fixed ports! 
+#      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
+#      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
     environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${SONG_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_SONG_SERVICE}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD_SONG_SERVICE}

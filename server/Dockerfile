@@ -4,7 +4,7 @@
 # build module
 FROM maven:3.9.9-eclipse-temurin-17-alpine AS build_module
 
-ENV MODULE_ROOT_DIR=/resource-service
+ENV MODULE_ROOT_DIR=/server
 WORKDIR $MODULE_ROOT_DIR
 
 # Copy pom.xml first, then download dependencies
@@ -22,7 +22,7 @@ RUN mvn clean package -Dmaven.test.skip=true
 # run module
 FROM eclipse-temurin:17-jre-alpine-3.21 AS run_module
 
-ENV MODULE_ROOT_DIR=/resource-service
+ENV MODULE_ROOT_DIR=/server
 ENV APP_JAR_FILENAME=app.jar
 
 # default (root) workdir
@@ -30,10 +30,9 @@ WORKDIR /
 
 COPY --from=build_module $MODULE_ROOT_DIR/target/*.jar $APP_JAR_FILENAME
 
-# tells Docker the container will listen on port 8091 internally
-EXPOSE 8091
+# tells Docker the container will listen on port 8761 internally
+EXPOSE 8761
 
 # run the app/container
 CMD java -jar "$APP_JAR_FILENAME"
 
-# use later --spring.config.location=classpath:/application.yml

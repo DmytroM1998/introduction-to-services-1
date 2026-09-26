@@ -1,5 +1,5 @@
-# use this command to build the image on Apple Silicon machine
-# docker build --platform=linux/amd64 -t song-service .
+# Use this command to build the image on Apple Silicon machine
+# docker buildx build --platform linux/amd64 -t song-service . --load
 
 # build module
 FROM maven:3.9.9-eclipse-temurin-17-alpine AS build_module
