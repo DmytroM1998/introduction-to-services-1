@@ -48,21 +48,18 @@ public class ResourcesService {
       new ErrorCodeException(HttpStatus.INTERNAL_SERVER_ERROR.value(), MessageConstants.SOMETHING_WENT_WRONG);
   
   private final Tika tika = new Tika();
-  private final RestTemplate restTemplate = new RestTemplate();
   private final ObjectMapper objectMapper = new ObjectMapper();
-  
   @Value("${song.service.ref.name}")
   private String songServiceRefName;
-  @Value("${song.service.server.port}")
-  private String songServiceServerPort;
 
   private final ResourceRepository resourceRepository;
+  private final RestTemplate restTemplate;
   
   private String songServiceUrlSongsController;
 
   @PostConstruct
   private void composeSongServiceReference() {
-    songServiceUrlSongsController = HTTP_PROTOCOL_URL + songServiceRefName + ":" + songServiceServerPort + SONG_SERVICE_SONGS_CONTROLLER;
+    songServiceUrlSongsController = HTTP_PROTOCOL_URL + songServiceRefName + SONG_SERVICE_SONGS_CONTROLLER;
     log.info("Song service URL: {}", songServiceUrlSongsController);
   }
   

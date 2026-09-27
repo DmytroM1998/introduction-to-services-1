@@ -3,6 +3,7 @@
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build
+# On Apple Silicon, it takes 7 minutes to prepare and 3 minutes to deploy.
 
 services:
   resource-db:
@@ -52,6 +53,7 @@ services:
       - "${RESOURCE_SERVICE_SERVER_PORT}:${RESOURCE_SERVICE_SERVER_PORT}"
       - "${RESOURCE_SERVICE_DEBUG_HOST_PORT}:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}" # for JVM debugging
     environment:
+      EUREKA_SERVER_URL: "http://eureka-server:${EUREKA_SERVER_PORT}/eureka/"
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_RESOURCE_SERVICE}
@@ -61,6 +63,7 @@ services:
       SONG_SERVICE_SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
     depends_on:
       - resource-db
+      - eureka-server
 
   song-service:
     build:
@@ -68,26 +71,33 @@ services:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
-    # Uncomment in case of scaling with fixed ports! 
+    # Fixed ports for 2 instances to be deployed (without --scale command)
 #    deploy:
 #      replicas: 2
-    ports:
-      - "${SONG_SERVICE_SERVER_PORT}:${SONG_SERVICE_SERVER_PORT}"
-      - "${SONG_SERVICE_DEBUG_HOST_PORT}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
-      # Uncomment in case of scaling with fixed ports! 
+#    ports:
 #      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
 #      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
+      
+    # Dynamic ports for 2 instances to be deployed (using --scale command)
+    # This way Docker Compose is asked to assign each replica a different available host port and forward it to the container’s Song Service port
+    ports:
+      - "${SONG_SERVICE_SERVER_PORT}"
+      
+    # Fixed ports for a single instance to be deployed
+#    ports:
+#      - "${SONG_SERVICE_SERVER_PORT}:${SONG_SERVICE_SERVER_PORT}" # 8092:8092
+#      - "${SONG_SERVICE_DEBUG_HOST_PORT}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}" # 5006:5005
     environment:
+      EUREKA_SERVER_URL: "http://eureka-server:${EUREKA_SERVER_PORT}/eureka/"
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${SONG_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_SONG_SERVICE}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD_SONG_SERVICE}
       SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
-      RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
-      RESOURCE_SERVICE_SERVER_PORT: ${RESOURCE_SERVICE_SERVER_PORT}
     depends_on:
       - song-db
-
+      - eureka-server
+      
 # the default network must be used by Module 2 rules
 #networks:
 #  microservices-net:
