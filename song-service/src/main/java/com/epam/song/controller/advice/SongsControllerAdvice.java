@@ -4,8 +4,10 @@ import com.epam.song.dto.ErrorResponse;
 import com.epam.song.exception.ErrorCodeException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -16,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class SongsControllerAdvice {
 
   @ExceptionHandler(ConstraintViolationException.class)
@@ -40,6 +43,15 @@ public class SongsControllerAdvice {
     return ResponseEntity.badRequest().body(errorResponse);
   }
 
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ErrorResponse> handleUnreadableRequest(HttpMessageNotReadableException e) {
+    ErrorResponse errorResponse = new ErrorResponse(
+        "Request body is missing or invalid",
+        String.valueOf(HttpStatus.BAD_REQUEST.value())
+    );
+    return ResponseEntity.badRequest().body(errorResponse);
+  }
+
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
@@ -56,4 +68,13 @@ public class SongsControllerAdvice {
     return ResponseEntity.status(HttpStatus.valueOf(e.getErrorCode())).body(errorResponse);
   }
 
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception e) {
+    log.error("Unexpected error while handling request", e);
+    ErrorResponse errorResponse = new ErrorResponse(
+        "An unexpected error occurred",
+        String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+    );
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+  }
 }

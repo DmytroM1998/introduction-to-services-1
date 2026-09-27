@@ -9,6 +9,7 @@ import com.epam.song.util.SongMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,18 +33,29 @@ public class SongsService {
     Long providedSongId = songDto.getId();
     if (!songsRepository.existsById(providedSongId)) {
       SongEntity songEntity = SongMapper.toEntity(songDto);
-      providedSongId = songsRepository.save(songEntity).getId();
-      return Map.of("id", providedSongId);
+      try {
+        providedSongId = songsRepository.save(songEntity).getId();
+        return Map.of("id", providedSongId);
+      } catch (DataIntegrityViolationException e) {
+        if (songsRepository.existsById(providedSongId)) {
+          throw duplicateSongException(providedSongId);
+        }
+        throw e;
+      }
     } else {
-      throw new ErrorCodeException(HttpStatus.CONFLICT.value(), String.format("Song with ID=%d already exists", providedSongId));
+      throw duplicateSongException(providedSongId);
     }
+  }
+
+  private ErrorCodeException duplicateSongException(Long songId) {
+    return new ErrorCodeException(HttpStatus.CONFLICT.value(), String.format("Song metadata with ID=%d already exists", songId));
   }
 
   public SongDto getSongById(String id) {
     long parsedId = parseId(id);
     return songsRepository.findById(parsedId)
         .map(SongMapper::toDto)
-        .orElseThrow(() -> new ErrorCodeException(HttpStatus.NOT_FOUND.value(), String.format("Song with ID=%d not found", parsedId)));
+        .orElseThrow(() -> new ErrorCodeException(HttpStatus.NOT_FOUND.value(), String.format("Song metadata with ID=%d not found", parsedId)));
   }
 
   private long parseId(String id) {

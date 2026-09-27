@@ -72,16 +72,16 @@ services:
       platforms:
         - linux/amd64
     # Fixed ports for 2 instances to be deployed (without --scale command)
-#    deploy:
-#      replicas: 2
-#    ports:
-#      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
-#      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
+    deploy:
+      replicas: 2
+    ports:
+      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
+      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
       
     # Dynamic ports for 2 instances to be deployed (using --scale command)
     # This way Docker Compose is asked to assign each replica a different available host port and forward it to the container’s Song Service port
-    ports:
-      - "${SONG_SERVICE_SERVER_PORT}"
+#    ports:
+#      - "${SONG_SERVICE_SERVER_PORT}"
       
     # Fixed ports for a single instance to be deployed
 #    ports:

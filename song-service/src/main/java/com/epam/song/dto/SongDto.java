@@ -16,23 +16,23 @@ public class SongDto {
   @Min(1)
   private Long id;
 
-  @NotBlank(message = "Song name is required")
-  @Size(min = 1, max = 100)
+  @NotBlank(message = "Song name must be between 1 and 100 characters")
+  @Size(min = 1, max = 100, message = "Song name must be between 1 and 100 characters")
   private String name;
 
-  @NotBlank(message = "Song artist is required")
-  @Size(min = 1, max = 100)
+  @NotBlank(message = "Artist name must be between 1 and 100 characters")
+  @Size(min = 1, max = 100, message = "Artist name must be between 1 and 100 characters")
   private String artist;
 
-  @NotBlank(message = "Song album is required")
-  @Size(min = 1, max = 100)
+  @NotBlank(message = "Album name must be between 1 and 100 characters")
+  @Size(min = 1, max = 100, message = "Album name must be between 1 and 100 characters")
   private String album;
 
-  @NotBlank(message = "Song duration is required")
+  @NotBlank(message = "Duration must be in mm:ss format with leading zeros")
   @Pattern(regexp = "^[012345]\\d:[0-5]\\d$", message = "Duration must be in mm:ss format with leading zeros")
   private String duration;
 
-  @NotBlank(message = "Song year is required")
+  @NotBlank(message = "Year must be between 1900 and 2099")
   @Pattern(regexp = "^(19|20)\\d{2}$", message = "Year must be between 1900 and 2099")
   private String year;
 
