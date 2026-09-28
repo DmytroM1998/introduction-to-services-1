@@ -3,7 +3,6 @@
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build [--scale song-service=2]
-# On Apple Silicon, it takes 7 minutes to prepare and 3 minutes to deploy.
 
 services:
   resource-db:
