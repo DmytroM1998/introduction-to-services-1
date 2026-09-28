@@ -1,8 +1,8 @@
 # For traditional app usage, deploy only the databases
-# docker compose up -d resource-db song-db
+# docker compose up -d resource-db song-db 
 
 # For full deployment to Docker, use the following command:
-# docker compose up -d --build
+# docker compose up -d --build [--scale song-service=2]
 # On Apple Silicon, it takes 7 minutes to prepare and 3 minutes to deploy.
 
 services:

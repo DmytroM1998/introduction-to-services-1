@@ -48,14 +48,14 @@ public class SongsService {
   }
 
   private ErrorCodeException duplicateSongException(Long songId) {
-    return new ErrorCodeException(HttpStatus.CONFLICT.value(), String.format("Song metadata with ID=%d already exists", songId));
+    return new ErrorCodeException(HttpStatus.CONFLICT.value(), String.format("Metadata for resource ID=%d already exists", songId));
   }
 
   public SongDto getSongById(String id) {
     long parsedId = parseId(id);
     return songsRepository.findById(parsedId)
         .map(SongMapper::toDto)
-        .orElseThrow(() -> new ErrorCodeException(HttpStatus.NOT_FOUND.value(), String.format("Song metadata with ID=%d not found", parsedId)));
+        .orElseThrow(() -> new ErrorCodeException(HttpStatus.NOT_FOUND.value(), String.format("Song metadata for ID=%d not found", parsedId)));
   }
 
   private long parseId(String id) {
