@@ -18,7 +18,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var songServiceUrl = pm.variables.get(\"song_service_url\");\r\n    var expectedBaseUrl = songServiceUrl + \"/songs\";\r\n    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r\n});\r\n\r\npm.test(\"Request body equals expected JSON object with dynamic test_id\", function () {\r\n    var requestBody = JSON.parse(pm.request.body.raw);\r\n\r\n    var expectedBody = {\r\n        \"id\": parseInt(pm.variables.get(\"test_id\")),\r\n        \"name\": \"We are the champions\",\r\n        \"artist\": \"Queen\",\r\n        \"album\": \"News of the world\",\r\n        \"duration\": \"02:59\",\r\n        \"year\": \"1977\"\r\n    };\r\n\r\n    pm.expect(requestBody, \"Request body does not match expected JSON object with dynamic test_id\")\r\n        .to.deep.equal(expectedBody);\r\n});\r\n\r\npm.test(\"Status code is 200\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r\n});\r\n\r\npm.test(\"Response is in JSON format\", function () {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r\n        .to.equal(\"application/json\");\r\n});\r\n\r\npm.test(\"Response contains generated test_id\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain test_id\")\r\n        .to.include(pm.variables.get(\"test_id\"));\r\n});\r\n\r\n// Validate response structure matches specification\r\npm.test(\"Response has 'id' field\", function () {\r\n    var responseBody = pm.response.json();\r\n    pm.expect(responseBody, \"Response should have 'id' property\").to.have.property(\"id\");\r\n    pm.expect(responseBody.id, \"Response id should be a number\").to.be.a(\"number\");\r\n});\r\n\r\n// Validate response has only 'id' field as per specification\r\npm.test(\"Response contains only 'id' field as per specification\", function () {\r\n    var responseBody = pm.response.json();\r\n    var keys = Object.keys(responseBody);\r\n    pm.expect(keys, \"Response should contain only 'id' field\").to.deep.equal([\"id\"]);\r\n});"
+                  "var responseBody = pm.response.json();\r\nif (Object.prototype.hasOwnProperty.call(responseBody, \"id\")) {\r\n    pm.collectionVariables.set(\"song_metadata_id\", responseBody.id);\r\n}\r\n\r\npm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var songServiceUrl = pm.variables.get(\"song_service_url\");\r\n    var expectedBaseUrl = songServiceUrl + \"/songs\";\r\n    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r\n});\r\n\r\npm.test(\"Request body equals expected JSON object with dynamic test_id\", function () {\r\n    var requestBody = JSON.parse(pm.request.body.raw);\r\n\r\n    var expectedBody = {\r\n        \"id\": parseInt(pm.variables.get(\"test_id\")),\r\n        \"name\": \"We are the champions\",\r\n        \"artist\": \"Queen\",\r\n        \"album\": \"News of the world\",\r\n        \"duration\": \"02:59\",\r\n        \"year\": \"1977\"\r\n    };\r\n\r\n    pm.expect(requestBody, \"Request body does not match expected JSON object with dynamic test_id\")\r\n        .to.deep.equal(expectedBody);\r\n});\r\n\r\npm.test(\"Status code is 200\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r\n});\r\n\r\npm.test(\"Response is in JSON format\", function () {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r\n        .to.equal(\"application/json\");\r\n});\r\n\r\npm.test(\"Response contains generated test_id\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain test_id\")\r\n        .to.include(pm.variables.get(\"test_id\"));\r\n});\r\n\r\n// Validate response structure matches specification\r\npm.test(\"Response has 'id' field\", function () {\r\n    var responseBody = pm.response.json();\r\n    pm.expect(responseBody, \"Response should have 'id' property\").to.have.property(\"id\");\r\n    pm.expect(responseBody.id, \"Response id should be a number\").to.be.a(\"number\");\r\n});\r\n\r\n// Validate response has only 'id' field as per specification\r\npm.test(\"Response contains only 'id' field as per specification\", function () {\r\n    var responseBody = pm.response.json();\r\n    var keys = Object.keys(responseBody);\r\n    pm.expect(keys, \"Response should contain only 'id' field\").to.deep.equal([\"id\"]);\r\n});"
                 ]
               }
             },
@@ -62,6 +62,130 @@
           "response": []
         },
         {
+          "name": "Get Test Song Metadata (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Request URL matches expected structure\", function () {\r",
+                  "    var requestUrl = pm.request.url.toString();\r",
+                  "    var expectedBaseUrl = pm.variables.get(\"song_service_url\") + \"/songs/\";\r",
+                  "    pm.expect(requestUrl.startsWith(expectedBaseUrl), \"Expected URL to start with the base song service URL\").to.be.true;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Path variable 'song_metadata_id' is dynamic\", function () {\r",
+                  "    var requestUrl = pm.request.url.toString();\r",
+                  "    var dynamicId = pm.variables.get(\"song_metadata_id\");\r",
+                  "    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
+                  "    pm.expect(requestUrl, \"Expected request URL to include dynamic 'song_metadata_id'\").to.equal(expectedUrl);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Status code is 200\", function () {\r",
+                  "    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response is in JSON format\", function () {\r",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r",
+                  "      .to.equal(\"application/json\");\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains 'id' field and it is not null\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'id' field\").to.have.property(\"id\").and.to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains 'name' field and it is not null\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'name' field\").to.have.property(\"name\").and.to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains 'artist' field and it is not null\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'artist' field\").to.have.property(\"artist\").and.to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains 'album' field and it is not null\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'album' field\").to.have.property(\"album\").and.to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains 'duration' field and it is not null\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'duration' field\").to.have.property(\"duration\").and.to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Duration is in mm:ss format with leading zeros\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'duration' field\").to.have.property(\"duration\").and.to.not.be.null;\r",
+                  "    \r",
+                  "    var durationPattern = /^\\d{2}:\\d{2}$/; // mm:ss format\r",
+                  "    pm.expect(jsonData.duration, `Expected duration '${jsonData.duration}' to match mm:ss format`).to.match(durationPattern);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response contains 'year' field and it is not null\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData, \"Expected response to contain 'year' field\").to.have.property(\"year\").and.to.not.be.null;\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response does not contain 'resourceId'\", function () {\r",
+                  "    var responseBody = pm.response.text();\r",
+                  "    pm.expect(responseBody, \"Response should not contain 'resourceId' field. Use 'id' field instead\").to.not.match(/\\bresourceId\\b/);\r",
+                  "});\r",
+                  "\r",
+                  "pm.test(\"Response does not contain 'length'\", function () {\r",
+                  "    var responseBody = pm.response.text();\r",
+                  "    pm.expect(responseBody, \"Response should not contain 'length' field. Use 'duration' field instead\").to.not.match(/\\blength\\b/);\r",
+                  "});\r",
+                  "\r",
+                  "// Validate response structure matches specification exactly\r",
+                  "pm.test(\"Response contains exactly 6 fields as per specification\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    var expectedFields = [\"id\", \"name\", \"artist\", \"album\", \"duration\", \"year\"];\r",
+                  "    var actualFields = Object.keys(jsonData).sort();\r",
+                  "    pm.expect(actualFields, \"Response should contain exactly: id, name, artist, album, duration, year\").to.deep.equal(expectedFields.sort());\r",
+                  "});\r",
+                  "\r",
+                  "// Validate field types match specification\r",
+                  "pm.test(\"All fields have correct types as per specification\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    pm.expect(jsonData.id, \"id should be a number\").to.be.a(\"number\");\r",
+                  "    pm.expect(jsonData.name, \"name should be a string\").to.be.a(\"string\");\r",
+                  "    pm.expect(jsonData.artist, \"artist should be a string\").to.be.a(\"string\");\r",
+                  "    pm.expect(jsonData.album, \"album should be a string\").to.be.a(\"string\");\r",
+                  "    pm.expect(jsonData.duration, \"duration should be a string\").to.be.a(\"string\");\r",
+                  "    pm.expect(jsonData.year, \"year should be a string\").to.be.a(\"string\");\r",
+                  "});\r",
+                  "\r",
+                  "// Validate year format matches specification pattern\r",
+                  "pm.test(\"Year is in 4-digit format as per specification\", function () {\r",
+                  "    var jsonData = pm.response.json();\r",
+                  "    var yearPattern = /^\\d{4}$/;\r",
+                  "    pm.expect(jsonData.year, `Expected year '${jsonData.year}' to be 4 digits`).to.match(yearPattern);\r",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{song_service_url}}/songs/{{song_metadata_id}}",
+              "host": [
+                "{{song_service_url}}"
+              ],
+              "path": [
+                "songs",
+                "{{song_metadata_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Upload Valid Mp3 Resource (200)",
           "event": [
             {
@@ -95,6 +219,48 @@
               ],
               "path": [
                 "resources"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Valid Song Metadata (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var responseBody = pm.response.json();\r\nif (Object.prototype.hasOwnProperty.call(responseBody, \"id\")) {\r\n    pm.collectionVariables.set(\"song_metadata_id\", responseBody.id);\r\n}\r\n\r\npm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var songServiceUrl = pm.variables.get(\"song_service_url\");\r\n    var expectedBaseUrl = songServiceUrl + \"/songs\";\r\n    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r\n});\r\n\r\npm.test(\"Request body equals expected JSON object with dynamic id\", function () {\r\n    var requestBody = JSON.parse(pm.request.body.raw);\r\n\r\n    var expectedBody = {\r\n        \"id\": parseInt(pm.variables.get(\"id\")),\r\n        \"name\": \"We are the champions\",\r\n        \"artist\": \"Queen\",\r\n        \"album\": \"News of the world\",\r\n        \"duration\": \"02:59\",\r\n        \"year\": \"1977\"\r\n    };\r\n\r\n    pm.expect(requestBody, \"Request body does not match expected JSON object with dynamic id\")\r\n        .to.deep.equal(expectedBody);\r\n});\r\n\r\npm.test(\"Status code is 200\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r\n});\r\n\r\npm.test(\"Response is in JSON format\", function () {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r\n        .to.equal(\"application/json\");\r\n});\r\n\r\npm.test(\"Response id matches resource id\", function () {\r\n    var responseBody = pm.response.json();\r\n    pm.expect(responseBody.id, \"Expected response id to match resource id\").to.equal(parseInt(pm.variables.get(\"id\")));\r\n});\r\n\r\n// Validate response structure matches specification\r\npm.test(\"Response has 'id' field\", function () {\r\n    var responseBody = pm.response.json();\r\n    pm.expect(responseBody, \"Response should have 'id' property\").to.have.property(\"id\");\r\n    pm.expect(responseBody.id, \"Response id should be a number\").to.be.a(\"number\");\r\n});\r\n\r\n// Validate response has only 'id' field as per specification\r\npm.test(\"Response contains only 'id' field as per specification\", function () {\r\n    var responseBody = pm.response.json();\r\n    var keys = Object.keys(responseBody);\r\n    pm.expect(keys, \"Response should contain only 'id' field\").to.deep.equal([\"id\"]);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": {{id}},\n    \"name\": \"We are the champions\",\n    \"artist\": \"Queen\",\n    \"album\": \"News of the world\",\n    \"duration\": \"02:59\",\n    \"year\": \"1977\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{song_service_url}}/songs",
+              "host": [
+                "{{song_service_url}}"
+              ],
+              "path": [
+                "songs"
               ]
             }
           },
@@ -2315,14 +2481,23 @@
               "response": []
             },
             {
-              "name": "! Upload Mp3 Before the Next Request",
+              "name": "! Upload Song Metadata Before the Next Request",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "var jsonData = pm.response.json();\r\nif (jsonData.id) {\r\n    pm.collectionVariables.set(\"id\", jsonData.id);\r\n}\r\n\r\npm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var resourceServiceUrl = pm.variables.get(\"resource_service_url\");\r\n    var expectedBaseUrl = resourceServiceUrl + \"/resources\";\r\n    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r\n});\r\n\r\npm.test(\"Status code is 200\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r\n});\r\n\r\npm.test(\"Response contains 'id' field\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'id' field\").to.have.property(\"id\");\r\n});"
+                      "var responseBody = pm.response.json();\r\nif (Object.prototype.hasOwnProperty.call(responseBody, \"id\")) {\r\n    pm.collectionVariables.set(\"song_metadata_id\", responseBody.id);\r\n}\r\n\r\npm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var songServiceUrl = pm.variables.get(\"song_service_url\");\r\n    var expectedBaseUrl = songServiceUrl + \"/songs\";\r\n    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r\n});\r\n\r\npm.test(\"Request body equals expected JSON object with dynamic test_id\", function () {\r\n    var requestBody = JSON.parse(pm.request.body.raw);\r\n\r\n    var expectedBody = {\r\n        \"id\": parseInt(pm.variables.get(\"test_id\")),\r\n        \"name\": \"We are the champions\",\r\n        \"artist\": \"Queen\",\r\n        \"album\": \"News of the world\",\r\n        \"duration\": \"02:59\",\r\n        \"year\": \"1977\"\r\n    };\r\n\r\n    pm.expect(requestBody, \"Request body does not match expected JSON object with dynamic test_id\")\r\n        .to.deep.equal(expectedBody);\r\n});\r\n\r\npm.test(\"Status code is 200\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r\n});\r\n\r\npm.test(\"Response is in JSON format\", function () {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r\n        .to.equal(\"application/json\");\r\n});\r\n\r\npm.test(\"Response contains generated test_id\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain test_id\")\r\n        .to.include(pm.variables.get(\"test_id\"));\r\n});\r\n\r\n// Validate response structure matches specification\r\npm.test(\"Response has 'id' field\", function () {\r\n    var responseBody = pm.response.json();\r\n    pm.expect(responseBody, \"Response should have 'id' property\").to.have.property(\"id\");\r\n    pm.expect(responseBody.id, \"Response id should be a number\").to.be.a(\"number\");\r\n});\r\n\r\n// Validate response has only 'id' field as per specification\r\npm.test(\"Response contains only 'id' field as per specification\", function () {\r\n    var responseBody = pm.response.json();\r\n    var keys = Object.keys(responseBody);\r\n    pm.expect(keys, \"Response should contain only 'id' field\").to.deep.equal([\"id\"]);\r\n});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let testId = Math.floor(100000 + Math.random() * 900000).toString();\r\npm.variables.set(\"test_id\", testId);"
                     ]
                   }
                 }
@@ -2332,22 +2507,25 @@
                 "header": [
                   {
                     "key": "Content-Type",
-                    "value": "audio/mpeg"
+                    "value": "application/json"
                   }
                 ],
                 "body": {
-                  "mode": "file",
-                  "file": {
-                    "src": ""
+                  "mode": "raw",
+                  "raw": "{\n    \"id\": {{test_id}},\n    \"name\": \"We are the champions\",\n    \"artist\": \"Queen\",\n    \"album\": \"News of the world\",\n    \"duration\": \"02:59\",\n    \"year\": \"1977\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
                   }
                 },
                 "url": {
-                  "raw": "{{resource_service_url}}/resources",
+                  "raw": "{{song_service_url}}/songs",
                   "host": [
-                    "{{resource_service_url}}"
+                    "{{song_service_url}}"
                   ],
                   "path": [
-                    "resources"
+                    "songs"
                   ]
                 }
               },
@@ -2367,17 +2545,17 @@
                       "    pm.expect(requestUrl, `Expected URL to match ${expectedBaseUrl}`).to.equal(expectedBaseUrl);\r",
                       "});\r",
                       "\r",
-                      "pm.test(\"Request body equals expected JSON object with dynamic id\", function () {\r",
+                      "pm.test(\"Request body equals expected JSON object with dynamic song_metadata_id\", function () {\r",
                       "    var requestBody = JSON.parse(pm.request.body.raw);\r",
                       "    var expectedBody = {\r",
-                      "        \"id\": parseInt(pm.variables.get(\"id\")),\r",
+                      "        \"id\": parseInt(pm.variables.get(\"song_metadata_id\")),\r",
                       "        \"name\": \"We are the champions\",\r",
                       "        \"artist\": \"Queen\",\r",
                       "        \"album\": \"News of the world\",\r",
                       "        \"duration\": \"02:59\",\r",
                       "        \"year\": \"1977\"\r",
                       "    };\r",
-                      "    pm.expect(requestBody, \"Request body does not match expected JSON object with dynamic id\").to.deep.equal(expectedBody);\r",
+                      "    pm.expect(requestBody, \"Request body does not match expected JSON object with dynamic song_metadata_id\").to.deep.equal(expectedBody);\r",
                       "});\r",
                       "\r",
                       "pm.test(\"Status code is 409\", function () {\r",
@@ -2404,9 +2582,9 @@
                       "    pm.expect(responseBody, \"Expected response to contain 'errorCode'\").to.include(\"errorCode\");\r",
                       "});\r",
                       "\r",
-                      "pm.test(\"Response contains resource id\", function () {\r",
+                      "pm.test(\"Response contains song metadata id\", function () {\r",
                       "    var responseBody = pm.response.text();\r",
-                      "    pm.expect(responseBody, \"Expected response to contain resource id\").to.include(pm.collectionVariables.get(\"id\"));\r",
+                      "    pm.expect(responseBody, \"Expected response to contain song metadata id\").to.include(pm.collectionVariables.get(\"song_metadata_id\"));\r",
                       "});\r",
                       "\r",
                       "// Validate error response structure matches specification\r",
@@ -2420,7 +2598,7 @@
                       "// Validate error message format matches specification exactly\r",
                       "pm.test(\"Error message exactly matches specification format\", function () {\r",
                       "    var jsonData = pm.response.json();\r",
-                      "    var dynamicId = pm.collectionVariables.get(\"id\");\r",
+                      "    var dynamicId = pm.collectionVariables.get(\"song_metadata_id\");\r",
                       "    var expectedMessage = `Metadata for resource ID=${dynamicId} already exists`;\r",
                       "    pm.expect(jsonData.errorMessage).to.equal(expectedMessage);\r",
                       "});\r",
@@ -2453,7 +2631,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"id\": {{id}},\n    \"name\": \"We are the champions\",\n    \"artist\": \"Queen\",\n    \"album\": \"News of the world\",\n    \"duration\": \"02:59\",\n    \"year\": \"1977\"\n}"
+                  "raw": "{\n    \"id\": {{song_metadata_id}},\n    \"name\": \"We are the champions\",\n    \"artist\": \"Queen\",\n    \"album\": \"News of the world\",\n    \"duration\": \"02:59\",\n    \"year\": \"1977\"\n}"
                 },
                 "url": {
                   "raw": "{{song_service_url}}/songs",
