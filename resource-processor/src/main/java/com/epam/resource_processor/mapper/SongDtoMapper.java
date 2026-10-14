@@ -1,6 +1,6 @@
-package com.epam.resource.util;
+package com.epam.resource_processor.mapper;
 
-import com.epam.resource.dto.SongDto;
+import com.epam.resource_processor.dto.SongDto;
 import org.apache.tika.metadata.Metadata;
 
 public class SongDtoMapper {

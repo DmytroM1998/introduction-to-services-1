@@ -1,4 +1,4 @@
-package com.epam.resource.dto;
+package com.epam.resource_processor.dto;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
