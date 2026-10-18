@@ -56,6 +56,7 @@ public class ResourcesService {
   @Value("${resource.storage.bucket}")
   private String storageBucket;
 
+  private final RabbitMQService rabbitMQService;
   private final ResourceRepository resourceRepository;
   private final RestTemplate restTemplate;
   private final S3Client s3Client;
@@ -73,13 +74,23 @@ public class ResourcesService {
     String objectKey = "resources/" + UUID.randomUUID() + ".mp3";
     String location = "s3://" + storageBucket + "/" + objectKey;
     ResourceEntity resourceEntity = new ResourceEntity(location);
+    ResourceEntity savedEntity = null;
 
     try {
       saveFileInS3Bucket(objectKey, mp3file);
-
-      ResourceEntity savedEntity = resourceRepository.save(resourceEntity);
+      savedEntity = resourceRepository.save(resourceEntity);
+      sendResourceMessageToProcessor(savedEntity);
       return Map.of("id", savedEntity.getId());
     } catch (RuntimeException saveFailure) {
+      if (savedEntity != null) {
+        try {
+          resourceRepository.delete(savedEntity);
+        } catch (RuntimeException cleanupFailure) {
+          saveFailure.addSuppressed(cleanupFailure);
+          log.error("Failed to remove resource record {} after upload failed",
+              savedEntity.getId(), cleanupFailure);
+        }
+      }
       try {
         DeleteObjectRequest s3DeletionReq = DeleteObjectRequest.builder()
           .bucket(storageBucket)
@@ -92,6 +103,10 @@ public class ResourcesService {
       }
       throw saveFailure;
     }
+  }
+
+  private void sendResourceMessageToProcessor(ResourceEntity savedEntity) {
+    rabbitMQService.sendResourceId(savedEntity.getId());
   }
 
   private byte[] extractBytesFromRequest(HttpServletRequest request) {

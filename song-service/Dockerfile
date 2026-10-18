@@ -32,7 +32,7 @@ COPY --from=build_module $MODULE_ROOT_DIR/target/*.jar $APP_JAR_FILENAME
 # tells Docker the container will listen on port 8092 internally
 EXPOSE 8092
 
-# run the app/container
+# run the app within the container
 CMD java -jar "$APP_JAR_FILENAME"
 
 # use later --spring.config.location=classpath:/application.yml

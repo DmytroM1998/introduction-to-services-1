@@ -34,7 +34,7 @@ services:
   localstack:
     image: localstack/localstack:latest
     ports:
-      - "4566:4566"
+      - "${LOCALSTACK_PORT}:${LOCALSTACK_PORT}"
     environment:
       SERVICES: s3
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
@@ -45,6 +45,20 @@ services:
       PERSISTENCE: -0
     healthcheck:
       test: ["CMD", "awslocal", "s3", "ls"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-app}
+    ports:
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+      - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -83,12 +97,38 @@ services:
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
+      RESOURCE_RABBITMQ_QUEUE: resource.uploaded
     depends_on:
       resource-db:
         condition: service_started
       eureka-server:
         condition: service_started
       localstack:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  resource-processor:
+    build:
+      context: ./resource-processor
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    ports:
+      - "${RESOURCE_PROCESSOR_SERVER_PORT}:${RESOURCE_PROCESSOR_SERVER_PORT}"
+    environment:
+      SERVER_PORT: ${RESOURCE_PROCESSOR_SERVER_PORT}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
+      RESOURCE_RABBITMQ_QUEUE: resource.uploaded
+    depends_on:
+      rabbitmq:
         condition: service_healthy
 
   song-service:
