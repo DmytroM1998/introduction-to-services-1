@@ -94,6 +94,15 @@ public class ResourcesService {
     }
   }
 
+  private byte[] extractBytesFromRequest(HttpServletRequest request) {
+    try {
+      return request.getInputStream().readAllBytes();
+    } catch (IOException e) {
+      log.error("Failed to process the file", e);
+      throw SOMETHING_WENT_WRONG_EXCEPTION;
+    }
+  }
+
   private void saveFileInS3Bucket(String objectKey, byte[] mp3file) {
     s3Client.putObject(
         PutObjectRequest.builder()
@@ -102,15 +111,6 @@ public class ResourcesService {
             .contentType("audio/mpeg")
             .build(),
         RequestBody.fromBytes(mp3file));
-  }
-
-  private byte[] extractBytesFromRequest(HttpServletRequest request) {
-    try {
-      return request.getInputStream().readAllBytes();
-    } catch (IOException e) {
-      log.error("Failed to process the file", e);
-      throw SOMETHING_WENT_WRONG_EXCEPTION;
-    }
   }
 
   public byte[] getResourceById(String id) {
@@ -152,30 +152,38 @@ public class ResourcesService {
     return Map.of("ids", deletedIds);
   }
 
-  private void sendRequestToDeleteSongsByIds(List<Long> deletedIds) {
-    if (deletedIds.isEmpty()) {
-      return;
+  private void validateResourceIdsLength(String ids) {
+    if (ids.length() >= IDS_STRING_MAX_LENGTH) {
+      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
+          String.format("CSV string is too long: received %s characters, maximum allowed is %s",
+              ids.length(), IDS_STRING_MAX_LENGTH));
     }
+  }
 
-    String deletedIdsParam = "?id=" + String.join(",", deletedIds.stream().map(String::valueOf).toList());
+  private List<Long> parseResourceIds(String ids) {
+    AtomicReference<String> invalidValue = new AtomicReference<>(StringUtils.EMPTY);
     try {
-      ResponseEntity<String> songDeleteResponse = restTemplate.exchange(
-          songServiceUrlSongsController + deletedIdsParam,
-          HttpMethod.DELETE,
-          null,
-          String.class);
+      return Arrays.stream(ids.split(","))
+          .map(id -> mapAndReturnInvalidLong(id, invalidValue))
+          .toList();
+    } catch (NumberFormatException e) {
+      log.error("Invalid resource ID: {}", invalidValue.get(), e);
+      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
+          String.format("Invalid ID format: '%s'. Only positive integers are allowed", invalidValue.get()));
+    }
+  }
 
-      if (songDeleteResponse.getStatusCode() != HttpStatus.OK) {
-        ErrorResponse errorResponse = objectMapper.readValue(songDeleteResponse.getBody(), ErrorResponse.class);
-        log.error("Error deleting songs: {}", errorResponse.getErrorMessage());
-        throw SOMETHING_WENT_WRONG_EXCEPTION;
+  private static long mapAndReturnInvalidLong(String id, AtomicReference<String> invalidValue) {
+    try {
+      long parsedId = Long.parseLong(id);
+      if (parsedId <= 0) {
+        invalidValue.set(id);
+        throw new NumberFormatException("Resource ID must be positive");
       }
-    } catch (RestClientException e) {
-      log.error("Failed to send delete IDs to song-service", e);
-      throw SOMETHING_WENT_WRONG_EXCEPTION;
-    } catch (JsonProcessingException e) {
-      log.error("Failed to parse response from song-service", e);
-      throw SOMETHING_WENT_WRONG_EXCEPTION;
+      return parsedId;
+    } catch (NumberFormatException e) {
+      invalidValue.set(id);
+      throw e;
     }
   }
 
@@ -212,38 +220,30 @@ public class ResourcesService {
     }
   }
 
-  private List<Long> parseResourceIds(String ids) {
-    AtomicReference<String> invalidValue = new AtomicReference<>(StringUtils.EMPTY);
-    try {
-      return Arrays.stream(ids.split(","))
-          .map(id -> mapAndReturnInvalidLong(id, invalidValue))
-          .toList();
-    } catch (NumberFormatException e) {
-      log.error("Invalid resource ID: {}", invalidValue.get(), e);
-      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
-          String.format("Invalid ID format: '%s'. Only positive integers are allowed", invalidValue.get()));
+  private void sendRequestToDeleteSongsByIds(List<Long> deletedIds) {
+    if (deletedIds.isEmpty()) {
+      return;
     }
-  }
 
-  private static long mapAndReturnInvalidLong(String id, AtomicReference<String> invalidValue) {
+    String deletedIdsParam = "?id=" + String.join(",", deletedIds.stream().map(String::valueOf).toList());
     try {
-      long parsedId = Long.parseLong(id);
-      if (parsedId <= 0) {
-        invalidValue.set(id);
-        throw new NumberFormatException("Resource ID must be positive");
+      ResponseEntity<String> songDeleteResponse = restTemplate.exchange(
+          songServiceUrlSongsController + deletedIdsParam,
+          HttpMethod.DELETE,
+          null,
+          String.class);
+
+      if (songDeleteResponse.getStatusCode() != HttpStatus.OK) {
+        ErrorResponse errorResponse = objectMapper.readValue(songDeleteResponse.getBody(), ErrorResponse.class);
+        log.error("Error deleting songs: {}", errorResponse.getErrorMessage());
+        throw SOMETHING_WENT_WRONG_EXCEPTION;
       }
-      return parsedId;
-    } catch (NumberFormatException e) {
-      invalidValue.set(id);
-      throw e;
-    }
-  }
-
-  private void validateResourceIdsLength(String ids) {
-    if (ids.length() >= IDS_STRING_MAX_LENGTH) {
-      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
-          String.format("CSV string is too long: received %s characters, maximum allowed is %s",
-              ids.length(), IDS_STRING_MAX_LENGTH));
+    } catch (RestClientException e) {
+      log.error("Failed to send delete IDs to song-service", e);
+      throw SOMETHING_WENT_WRONG_EXCEPTION;
+    } catch (JsonProcessingException e) {
+      log.error("Failed to parse response from song-service", e);
+      throw SOMETHING_WENT_WRONG_EXCEPTION;
     }
   }
 
