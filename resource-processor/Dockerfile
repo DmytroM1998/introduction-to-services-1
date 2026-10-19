@@ -29,4 +29,4 @@ COPY --from=build_module $MODULE_ROOT_DIR/target/*.jar app.jar
 EXPOSE 8101
 
 # run the app within the container
-CMD ["java", "-jar", "$APP_JAR_FILENAME"]
+CMD ["sh", "-c", "exec java -jar \"$APP_JAR_FILENAME\""]

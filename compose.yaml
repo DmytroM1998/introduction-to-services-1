@@ -40,7 +40,7 @@ services:
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
       # Sign up at https://app.localstack.cloud, choose AWS and non-commercial usage
       # and copy Personal Auth Token at "Getting Started" page
-      LOCALSTACK_AUTH_TOKEN: "ls-bAwOXezu-..."
+      LOCALSTACK_AUTH_TOKEN: "ls-bAwOXezu-2374-BeKI-BIYi-ZiDA2460ea97"
       DEBUG: -0
       PERSISTENCE: -0
     healthcheck:

@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -59,6 +60,7 @@ public class ResourcesService {
   private final RabbitMQService rabbitMQService;
   private final ResourceRepository resourceRepository;
   private final RestTemplate restTemplate;
+  private final RetryTemplate retryTemplate;
   private final S3Client s3Client;
 
   private String songServiceUrlSongsController;
@@ -78,13 +80,17 @@ public class ResourcesService {
 
     try {
       saveFileInS3Bucket(objectKey, mp3file);
-      savedEntity = resourceRepository.save(resourceEntity);
+      savedEntity = retryTemplate.execute(context -> resourceRepository.save(resourceEntity));
       sendResourceMessageToProcessor(savedEntity);
       return Map.of("id", savedEntity.getId());
     } catch (RuntimeException saveFailure) {
       if (savedEntity != null) {
         try {
-          resourceRepository.delete(savedEntity);
+          ResourceEntity resourceToDelete = savedEntity;
+          retryTemplate.execute(context -> {
+            resourceRepository.delete(resourceToDelete);
+            return null;
+          });
         } catch (RuntimeException cleanupFailure) {
           saveFailure.addSuppressed(cleanupFailure);
           log.error("Failed to remove resource record {} after upload failed",
@@ -106,7 +112,16 @@ public class ResourcesService {
   }
 
   private void sendResourceMessageToProcessor(ResourceEntity savedEntity) {
-    rabbitMQService.sendResourceId(savedEntity.getId());
+    RetryPattern.execute(() -> {
+      rabbitMQService.sendResourceId(savedEntity.getId());
+      return null;
+    }, ResourcesService::isTransientRabbitFailure);
+  }
+
+  private static boolean isTransientRabbitFailure(RuntimeException failure) {
+    return failure instanceof org.springframework.amqp.AmqpConnectException
+        || failure instanceof org.springframework.amqp.AmqpIOException
+        || failure instanceof org.springframework.amqp.AmqpTimeoutException;
   }
 
   private byte[] extractBytesFromRequest(HttpServletRequest request) {
@@ -130,7 +145,7 @@ public class ResourcesService {
 
   public byte[] getResourceById(String id) {
     long parsedId = parseId(id);
-    ResourceEntity resource = resourceRepository.findById(parsedId)
+    ResourceEntity resource = retryTemplate.execute(context -> resourceRepository.findById(parsedId))
         .orElseThrow(() -> new ErrorCodeException(
             HttpStatus.NOT_FOUND.value(),
             String.format("Resource with ID=%d not found", parsedId)));
@@ -203,7 +218,8 @@ public class ResourcesService {
   }
 
   private List<Long> deleteExistingResourcesById(List<Long> idList) {
-    List<ResourceEntity> foundResources = resourceRepository.findAllById(idList);
+    List<ResourceEntity> foundResources =
+        retryTemplate.execute(context -> resourceRepository.findAllById(idList));
     for (ResourceEntity resource : foundResources) {
       ObjectLocation location = parseLocation(resource.getLocation());
       DeleteObjectRequest s3DeletionReq = DeleteObjectRequest.builder()
@@ -211,7 +227,10 @@ public class ResourcesService {
         .key(location.key())
         .build();
       s3Client.deleteObject(s3DeletionReq);
-      resourceRepository.delete(resource);
+      retryTemplate.execute(context -> {
+        resourceRepository.delete(resource);
+        return null;
+      });
     }
     return foundResources.stream().map(ResourceEntity::getId).toList();
   }
@@ -242,11 +261,12 @@ public class ResourcesService {
 
     String deletedIdsParam = "?id=" + String.join(",", deletedIds.stream().map(String::valueOf).toList());
     try {
-      ResponseEntity<String> songDeleteResponse = restTemplate.exchange(
-          songServiceUrlSongsController + deletedIdsParam,
-          HttpMethod.DELETE,
-          null,
-          String.class);
+      ResponseEntity<String> songDeleteResponse = retryTemplate.execute(context ->
+          restTemplate.exchange(
+              songServiceUrlSongsController + deletedIdsParam,
+              HttpMethod.DELETE,
+              null,
+              String.class));
 
       if (songDeleteResponse.getStatusCode() != HttpStatus.OK) {
         ErrorResponse errorResponse = objectMapper.readValue(songDeleteResponse.getBody(), ErrorResponse.class);

@@ -18,7 +18,7 @@ public class ResourceMetadataService {
     public static final String SOMETHING_WENT_WRONG = "Something went wrong";
     private final Tika tika = new Tika();
 
-    public SongDto processAndPrintResourceMetadata(Long resourceId, byte[] mp3file) {
+    public SongDto processResourceMetadata(Long resourceId, byte[] mp3file) {
         log.debug("mp3file size: {}", mp3file.length);
         Metadata metadata = extractMetadata(mp3file);
         SongDto parsedSongDto = SongDtoMapper.toDto(resourceId, metadata);

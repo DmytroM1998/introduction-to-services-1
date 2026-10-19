@@ -10,9 +10,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.RecoverableDataAccessException;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +34,14 @@ public class SongsService {
   
   private final SongsRepository songsRepository;
   
+  @Retryable(
+      retryFor = {
+          TransientDataAccessException.class,
+          RecoverableDataAccessException.class,
+          DataAccessResourceFailureException.class
+      },
+      maxAttempts = 3,
+      backoff = @Backoff(delay = 200, multiplier = 2, maxDelay = 1000))
   public Map<String, Long> saveNewSong(SongDto songDto) {
     Long providedSongId = songDto.getId();
     if (!songsRepository.existsById(providedSongId)) {
@@ -51,6 +64,14 @@ public class SongsService {
     return new ErrorCodeException(HttpStatus.CONFLICT.value(), String.format("Metadata for resource ID=%d already exists", songId));
   }
 
+  @Retryable(
+      retryFor = {
+          TransientDataAccessException.class,
+          RecoverableDataAccessException.class,
+          DataAccessResourceFailureException.class
+      },
+      maxAttempts = 3,
+      backoff = @Backoff(delay = 200, multiplier = 2, maxDelay = 1000))
   public SongDto getSongById(String id) {
     long parsedId = parseId(id);
     return songsRepository.findById(parsedId)
@@ -74,11 +95,23 @@ public class SongsService {
   }
 
   @Transactional
+  @Retryable(
+      retryFor = {
+          TransientDataAccessException.class,
+          RecoverableDataAccessException.class,
+          DataAccessResourceFailureException.class
+      },
+      maxAttempts = 3,
+      backoff = @Backoff(delay = 200, multiplier = 2, maxDelay = 1000))
   public Map<String, List<Long>> deleteSongsByIds(String ids) {
     validateSongsIdsLength(ids);
     List<Long> idList = parseSongIds(ids);
     try {
       return deleteExistingSongsByIds(idList);
+    } catch (TransientDataAccessException | RecoverableDataAccessException
+        | DataAccessResourceFailureException e) {
+      log.error("Transient database failure while deleting song metadata", e);
+      throw e;
     } catch (Exception e) {
       log.error(e.getMessage());
       throw new ErrorCodeException(HttpStatus.INTERNAL_SERVER_ERROR.value(), MessageConstants.SOMETHING_WENT_WRONG);
