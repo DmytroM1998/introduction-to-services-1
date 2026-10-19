@@ -1,5 +1,5 @@
-# For traditional app usage, deploy only the databases
-# docker compose up -d resource-db song-db 
+# For traditional app usage, deploy the databases and resource object storage
+# docker compose up -d resource-db song-db localstack
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build [--scale song-service=2]
@@ -30,6 +30,24 @@ services:
       - ./init-scripts/song-db:/docker-entrypoint-initdb.d # Places the init scripts in the container's init directory
     # networks:
     #  - microservices-net
+
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+      # Sign up at https://app.localstack.cloud, choose AWS and non-commercial usage
+      # and copy Personal Auth Token at "Getting Started" page
+      LOCALSTACK_AUTH_TOKEN: "ls-bAwOXezu-..."
+      DEBUG: -0
+      PERSISTENCE: -0
+    healthcheck:
+      test: ["CMD", "awslocal", "s3", "ls"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     
   eureka-server:
     build:
@@ -60,9 +78,18 @@ services:
       SERVER_PORT: ${RESOURCE_SERVICE_SERVER_PORT}
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
       SONG_SERVICE_SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
+      RESOURCE_STORAGE_ENDPOINT: http://localstack:4566
+      RESOURCE_STORAGE_BUCKET: ${RESOURCE_STORAGE_BUCKET:-resources}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
     depends_on:
-      - resource-db
-      - eureka-server
+      resource-db:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+      localstack:
+        condition: service_healthy
 
   song-service:
     build:
