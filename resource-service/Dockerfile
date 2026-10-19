@@ -34,6 +34,6 @@ COPY --from=build_module $MODULE_ROOT_DIR/target/*.jar $APP_JAR_FILENAME
 EXPOSE 8091
 
 # run the app/container
-CMD java -jar "$APP_JAR_FILENAME"
+CMD ["java", "-jar", "$APP_JAR_FILENAME"]
 
 # use later --spring.config.location=classpath:/application.yml

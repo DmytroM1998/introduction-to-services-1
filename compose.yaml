@@ -101,7 +101,7 @@ services:
       SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
-      RESOURCE_RABBITMQ_QUEUE: resource.uploaded
+      RESOURCE_RABBITMQ_EXCHANGE: resource.uploaded
     depends_on:
       resource-db:
         condition: service_started
@@ -122,14 +122,18 @@ services:
       - "${RESOURCE_PROCESSOR_SERVER_PORT}:${RESOURCE_PROCESSOR_SERVER_PORT}"
     environment:
       SERVER_PORT: ${RESOURCE_PROCESSOR_SERVER_PORT}
+      EUREKA_SERVER_URL: "http://eureka-server:${EUREKA_SERVER_PORT}/eureka/"
+      RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
+      SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
-      RESOURCE_RABBITMQ_QUEUE: resource.uploaded
     depends_on:
       rabbitmq:
         condition: service_healthy
+      eureka-server:
+        condition: service_started
 
   song-service:
     build:

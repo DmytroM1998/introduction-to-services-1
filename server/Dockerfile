@@ -34,5 +34,5 @@ COPY --from=build_module $MODULE_ROOT_DIR/target/*.jar $APP_JAR_FILENAME
 EXPOSE 8761
 
 # run the app/container
-CMD java -jar "$APP_JAR_FILENAME"
+CMD ["java", "-jar", "$APP_JAR_FILENAME"]
 
