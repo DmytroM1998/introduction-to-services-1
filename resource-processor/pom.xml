@@ -30,6 +30,9 @@
 		<java.version>17</java.version>
 		<apache.tika.version>3.3.2</apache.tika.version>
 		<spring-cloud.version>2025.1.2</spring-cloud.version>
+		<groovy.version>4.0.23</groovy.version>
+		<spock.version>2.4-M4-groovy-4.0</spock.version>
+		<pact.version>4.6.14</pact.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -77,6 +80,40 @@
 			<version>${apache.tika.version}</version>
 		</dependency>
 
+		<!-- ===== TEST DEPENDENCIES ===== -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-test-binder</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Spock Framework (Groovy) -->
+		<dependency>
+			<groupId>org.apache.groovy</groupId>
+			<artifactId>groovy</artifactId>
+			<version>${groovy.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-core</artifactId>
+			<version>${spock.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-spring</artifactId>
+			<version>${spock.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Pact Consumer -->
+		<dependency>
+			<groupId>au.com.dius.pact.consumer</groupId>
+			<artifactId>junit5</artifactId>
+			<version>${pact.version}</version>
+			<scope>test</scope>
+		</dependency>
+
 	</dependencies>
 
 	<dependencyManagement>
@@ -94,6 +131,22 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<pact_do_not_track>true</pact_do_not_track>
+					</systemPropertyVariables>
+					<includes>
+						<include>**/Test*.java</include>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+						<include>**/*TestCase.java</include>
+						<include>**/*Spec.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
@@ -108,6 +161,7 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
+							<release>17</release>
 							<annotationProcessorPaths>
 								<path>
 									<groupId>org.projectlombok</groupId>
@@ -123,6 +177,7 @@
 							<goal>testCompile</goal>
 						</goals>
 						<configuration>
+							<release>17</release>
 							<annotationProcessorPaths>
 								<path>
 									<groupId>org.projectlombok</groupId>
@@ -130,6 +185,23 @@
 								</path>
 							</annotationProcessorPaths>
 						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- GMavenPlus for Groovy/Spock test sources -->
+			<plugin>
+				<groupId>org.codehaus.gmavenplus</groupId>
+				<artifactId>gmavenplus-plugin</artifactId>
+				<version>3.0.2</version>
+				<configuration>
+					<targetBytecode>17</targetBytecode>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>addTestSources</goal>
+							<goal>compileTests</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>

@@ -12,9 +12,10 @@ COPY pom.xml .
 # Since no source code is introduced yet, this layer is cached if pom.xml doesn't change
 RUN mvn dependency:go-offline
 
-# Only then copy the source code and resources
+# Only then copy the source code, resources and test contracts
 COPY src/main/java ./src/main/java
 COPY src/main/resources ./src/main/resources
+COPY src/test/resources/contracts ./src/test/resources/contracts
 
 # build .jar file in /target dir. There are no unit tests, but still
 RUN mvn clean package -Dmaven.test.skip=true
