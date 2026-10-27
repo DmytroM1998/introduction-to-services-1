@@ -5,12 +5,12 @@ import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class RetryPattern {
+public final class CustomRetryPattern {
 
   private static final int MAX_ATTEMPTS = 3;
   private static final long INITIAL_DELAY_MILLIS = 200;
 
-  private RetryPattern() {
+  private CustomRetryPattern() {
   }
 
   public static <T> T execute(Supplier<T> operation, Predicate<RuntimeException> retryable) {

@@ -10,13 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,12 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +36,7 @@ public class ResourcesService {
   private static final String HTTP_PROTOCOL_URL = "http://";
   private static final String SONG_SERVICE_SONGS_CONTROLLER = "/songs";
   private static final int IDS_STRING_MAX_LENGTH = 200;
-  private static final ErrorCodeException SOMETHING_WENT_WRONG_EXCEPTION = new ErrorCodeException(
+  public static final ErrorCodeException SOMETHING_WENT_WRONG_EXCEPTION = new ErrorCodeException(
     HttpStatus.INTERNAL_SERVER_ERROR.value(), 
     MessageConstants.SOMETHING_WENT_WRONG);
   
@@ -54,14 +45,11 @@ public class ResourcesService {
   @Value("${song.service.ref.name}")
   private String songServiceRefName;
 
-  @Value("${resource.storage.bucket}")
-  private String storageBucket;
-
   private final RabbitMQService rabbitMQService;
   private final ResourceRepository resourceRepository;
   private final RestTemplate restTemplate;
   private final RetryTemplate retryTemplate;
-  private final S3Client s3Client;
+  private final S3BucketService s3BucketService;
 
   private String songServiceUrlSongsController;
 
@@ -73,46 +61,40 @@ public class ResourcesService {
 
   public Map<String, Long> processAndSaveResource(HttpServletRequest request) {
     byte[] mp3file = extractBytesFromRequest(request);
-    String objectKey = "resources/" + UUID.randomUUID() + ".mp3";
-    String location = "s3://" + storageBucket + "/" + objectKey;
+    String objectKey = s3BucketService.generateMp3ResourceObjectKey();
+    String location = s3BucketService.getResourceStorageBucketLocation(objectKey);
     ResourceEntity resourceEntity = new ResourceEntity(location);
     ResourceEntity savedEntity = null;
 
     try {
-      saveFileInS3Bucket(objectKey, mp3file);
+      s3BucketService.saveFileInS3StorageBucket(objectKey, mp3file);
       savedEntity = retryTemplate.execute(context -> resourceRepository.save(resourceEntity));
       sendResourceMessageToProcessor(savedEntity);
       return Map.of("id", savedEntity.getId());
     } catch (RuntimeException saveFailure) {
-      if (savedEntity != null) {
-        try {
-          ResourceEntity resourceToDelete = savedEntity;
-          retryTemplate.execute(context -> {
-            resourceRepository.delete(resourceToDelete);
-            return null;
-          });
-        } catch (RuntimeException cleanupFailure) {
-          saveFailure.addSuppressed(cleanupFailure);
-          log.error("Failed to remove resource record {} after upload failed",
-              savedEntity.getId(), cleanupFailure);
-        }
-      }
-      try {
-        DeleteObjectRequest s3DeletionReq = DeleteObjectRequest.builder()
-          .bucket(storageBucket)
-          .key(objectKey)
-          .build();
-        s3Client.deleteObject(s3DeletionReq);
-      } catch (RuntimeException cleanupFailure) {
-        saveFailure.addSuppressed(cleanupFailure);
-        log.error("Failed to remove uploaded object {} after resource persistence failed", location, cleanupFailure);
-      }
+      tryToDeleteResourceFromDb(savedEntity, saveFailure);
+      s3BucketService.deleteObjectOnRollback(objectKey, saveFailure);
       throw saveFailure;
     }
   }
 
+  private void tryToDeleteResourceFromDb(ResourceEntity resourceToDelete, RuntimeException saveFailure) {
+    if (resourceToDelete != null) {
+      try {
+        retryTemplate.execute(context -> {
+          resourceRepository.delete(resourceToDelete);
+          return null;
+        });
+      } catch (RuntimeException cleanupFailure) {
+        saveFailure.addSuppressed(cleanupFailure);
+        log.error("Failed to remove resource record {} after upload failed",
+            resourceToDelete.getId(), cleanupFailure);
+      }
+    }
+  }
+
   private void sendResourceMessageToProcessor(ResourceEntity savedEntity) {
-    RetryPattern.execute(() -> {
+    CustomRetryPattern.execute(() -> {
       rabbitMQService.sendResourceId(savedEntity.getId());
       return null;
     }, ResourcesService::isTransientRabbitFailure);
@@ -133,16 +115,6 @@ public class ResourcesService {
     }
   }
 
-  private void saveFileInS3Bucket(String objectKey, byte[] mp3file) {
-    s3Client.putObject(
-        PutObjectRequest.builder()
-            .bucket(storageBucket)
-            .key(objectKey)
-            .contentType("audio/mpeg")
-            .build(),
-        RequestBody.fromBytes(mp3file));
-  }
-
   public byte[] getResourceById(String id) {
     long parsedId = parseId(id);
     ResourceEntity resource = retryTemplate.execute(context -> resourceRepository.findById(parsedId))
@@ -150,12 +122,7 @@ public class ResourcesService {
             HttpStatus.NOT_FOUND.value(),
             String.format("Resource with ID=%d not found", parsedId)));
 
-    ObjectLocation location = parseLocation(resource.getLocation());
-    GetObjectRequest s3GetRequest = GetObjectRequest.builder()
-      .bucket(location.bucket())
-      .key(location.key())
-      .build();
-    ResponseBytes<GetObjectResponse> binaryResource = s3Client.getObjectAsBytes(s3GetRequest);
+    ResponseBytes<GetObjectResponse> binaryResource = s3BucketService.getS3ObjectAsBytes(resource);
     return binaryResource.asByteArray();
   }
 
@@ -195,6 +162,7 @@ public class ResourcesService {
     try {
       return Arrays.stream(ids.split(","))
           .map(id -> mapAndReturnInvalidLong(id, invalidValue))
+          .peek(id -> validateIdRange(id, invalidValue))
           .toList();
     } catch (NumberFormatException e) {
       log.error("Invalid resource ID: {}", invalidValue.get(), e);
@@ -205,15 +173,17 @@ public class ResourcesService {
 
   private static long mapAndReturnInvalidLong(String id, AtomicReference<String> invalidValue) {
     try {
-      long parsedId = Long.parseLong(id);
-      if (parsedId <= 0) {
-        invalidValue.set(id);
-        throw new NumberFormatException("Resource ID must be positive");
-      }
-      return parsedId;
+      return Long.parseLong(id);
     } catch (NumberFormatException e) {
       invalidValue.set(id);
       throw e;
+    }
+  }
+
+  private void validateIdRange(Long parsedId, AtomicReference<String> invalidValue) {
+    if (parsedId <= 0) {
+      invalidValue.set(String.valueOf(parsedId));
+      throw new NumberFormatException("Resource ID must be positive");
     }
   }
 
@@ -221,37 +191,13 @@ public class ResourcesService {
     List<ResourceEntity> foundResources =
         retryTemplate.execute(context -> resourceRepository.findAllById(idList));
     for (ResourceEntity resource : foundResources) {
-      ObjectLocation location = parseLocation(resource.getLocation());
-      DeleteObjectRequest s3DeletionReq = DeleteObjectRequest.builder()
-        .bucket(location.bucket())
-        .key(location.key())
-        .build();
-      s3Client.deleteObject(s3DeletionReq);
+      s3BucketService.deleteS3Object(resource);
       retryTemplate.execute(context -> {
         resourceRepository.delete(resource);
         return null;
       });
     }
     return foundResources.stream().map(ResourceEntity::getId).toList();
-  }
-
-  private ObjectLocation parseLocation(String location) {
-    try {
-      URI uri = URI.create(location);
-      String key = uri.getPath();
-      validateRetrievedLocation(uri, key);
-      return new ObjectLocation(uri.getHost(), key.substring(1));
-    } catch (IllegalArgumentException e) {
-      log.error("Invalid S3 location stored for resource: {}", location, e);
-      throw SOMETHING_WENT_WRONG_EXCEPTION;
-    }
-  }
-
-  private static void validateRetrievedLocation(URI uri, String key) {
-    if (!"s3".equals(uri.getScheme()) || StringUtils.isBlank(uri.getHost())
-        || StringUtils.isBlank(key) || key.equals("/")) {
-      throw new IllegalArgumentException("Invalid S3 resource location");
-    }
   }
 
   private void sendRequestToDeleteSongsByIds(List<Long> deletedIds) {
@@ -280,8 +226,5 @@ public class ResourcesService {
       log.error("Failed to parse response from song-service", e);
       throw SOMETHING_WENT_WRONG_EXCEPTION;
     }
-  }
-
-  private record ObjectLocation(String bucket, String key) {
   }
 }

@@ -74,6 +74,7 @@ public class SongsService {
       backoff = @Backoff(delay = 200, multiplier = 2, maxDelay = 1000))
   public SongDto getSongById(String id) {
     long parsedId = parseId(id);
+    validateIdRange(parsedId);
     return songsRepository.findById(parsedId)
         .map(SongMapper::toDto)
         .orElseThrow(() -> new ErrorCodeException(HttpStatus.NOT_FOUND.value(), String.format("Song metadata for ID=%d not found", parsedId)));
@@ -81,16 +82,18 @@ public class SongsService {
 
   private long parseId(String id) {
     try {
-      int parsedId = Integer.parseInt(id);
-      if (parsedId <= 0) {
-        throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
-            String.format("Invalid value '%s' for ID. Must be a positive integer", id));
-      }
-      return parsedId;
+      return Long.parseLong(id);
     } catch (NumberFormatException e) {
       log.error(e.getMessage());
       throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
           String.format("Invalid value '%s' for ID. Must be a positive integer", id));
+    }
+  }
+  
+  private void validateIdRange(long songId) {
+    if (songId <= 0) {
+      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
+          String.format("Invalid value '%s' for ID. Must be a positive integer", songId));
     }
   }
 
