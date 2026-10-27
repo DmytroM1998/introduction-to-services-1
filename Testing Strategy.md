@@ -1,93 +1,60 @@
+# Testing Strategy
+
+## Purpose and scope
+
+This strategy uses a small, risk-based set of tests to catch regressions in the service logic and the important boundaries between services. It is intended to provide useful confidence without aiming for exhaustive coverage: the project is expected to change, so the tests should focus on core behavior and high-risk interactions rather than a fixed coverage percentage.
+
+The test suite should follow a practical testing pyramid: many focused unit tests, fewer component and integration tests, a small number of contract checks for service-to-service interfaces, and one or two end-to-end smoke tests. **100% unit, integration, or line coverage is not a goal.** Add tests for meaningful behavior and likely failure points; avoid duplicating the same scenarios at every level.
+
 ## Unit tests
 
-Most of the logic is concentrated in the following classes:
-- song-service/src/main/java/com/epam/song/service/SongsService.java
-- resource-service/src/main/java/com/epam/resource/service/RabbitMQService.java
-- resource-service/src/main/java/com/epam/resource/service/ResourcesService.java
-- resource-service/src/main/java/com/epam/resource/service/S3BucketService.java
-- resource-processor/src/main/java/com/epam/resource_processor/service/ResourceMetadataService.java
-- resource-processor/src/main/java/com/epam/resource_processor/service/CommunicationService.java
-- resource-processor/src/main/java/com/epam/resource_processor/mapper/SongDtoMapper.java
+Unit tests exercise a class or small piece of logic in isolation, using mocks for its collaborators. Prioritize:
 
-#### Approach
-Test service methods for possible outcomes in resource-service, resource-processor and song-service with neighboring consumers mocked.
+- `SongsService`, `ResourcesService`, `S3BucketService`, and `RabbitMQService`.
+- `ResourceMetadataService`, `CommunicationService`, and `SongDtoMapper`.
+- Validation, parsing, mapping, and success/error branches where behavior is owned by the class under test.
 
-## Integration tests
-
-#### Endpoints
-**resource-service**
-/resources
-- POST: saves data in LocalStack, sends resource ID to RabbitMQ, saves LocalStack object location and resource ID in resource-db database, returns id.
-- GET /{id}: gets data from LocalStack, gets entity from resource-db database, returns binary data.
-- DELETE /{id}: deletes object in LocalStack, delete entity in resource-db database, returns id
-
-**song-service**
-/songs
-- POST: saves metadata in song-db database, returns song id
-- GET /{id}: gets metadata from song-db database, returns song details
-- DELETE /{ids}: delete entity in song-db database, returns all, some of or none of the provided ids
-
-**resource-processor**
-- [ResourceMessageListener.java](./resource-processor/src/main/java/com/epam/resource_processor/service/ResourceMessageListener.java): consumes resource id, calls GET /resources, processes a binary file, calls POST /songs.
-
-#### Approach
-(Test all paths through microservices of running endpoints? Will mock logic still be present in test containers? What to do with resource-processor?)
+Cover representative normal cases and important edge cases, such as invalid or missing IDs, malformed input, dependency failures, and partial delete results. Keep tests fast and deterministic; do not start Spring or external infrastructure for these tests.
 
 ## Component tests
 
-#### Endpoints
-**resource-service**
-/resources
-- POST: mocks LocalStack, mocks RabbitMQ, mocks resource-db database, returns id
-- GET /{id}: mocks LocalStack, mocks resource-db database, returns some binary data
-- DELETE /{id}: mocks LocalStack, mocks resource-db database, returns id
+Component tests exercise one service through its public boundary while replacing dependencies outside that service with mocks or stubs. They verify that the service's own controllers, request handling, validation, exception handling, and wiring behave together correctly.
 
-**song-service**
-/songs
-- POST: mocks song-db database, returns song id
-- GET /{id}: mocks song-db database, returns song details
-- DELETE /{ids}: mocks song-db database, returns all, some of or none of the provided ids
+- For `resource-service` and `song-service`, use Spring MVC tests (for example, MockMvc) to check representative endpoint success and error responses. Mock service-layer or external collaborators as appropriate; do not mock the controller when testing the HTTP boundary.
+- `resource-service`: cover upload, fetch, and delete behavior, including representative invalid-input/not-found and dependency-error responses.
+- `song-service`: cover create, fetch, and delete behavior, including validation and not-found/error responses.
+- `resource-processor` has no public REST endpoint for its main workflow. Test its message-consumer component with a controlled message and stubbed HTTP collaborators, verifying that it fetches the resource, processes the bytes, and submits song metadata. Keep metadata parsing itself covered by unit tests.
 
-**resource-processor**
-- [ResourceMessageListener.java](./resource-processor/src/main/java/com/epam/resource_processor/service/ResourceMessageListener.java): mocks consumed id, mocks GET /resources, mocks POST /songs.
+These tests should cover a few representative paths rather than replay the entire Postman collection. In particular, include error cases where the API contract promises a specific status or response body.
 
-#### Approach
-Have a few Spring MockMvc REST assured tests which mock response from a database, other sources and microservices. (Which scenarios should they test? Probably "Error cases" requests from the Postman collection should be tested, like Controller Advice responses)
+## Integration tests
+
+Integration tests verify that a service's code works with the real technologies it directly depends on, rather than testing all microservices together. Use disposable local infrastructure (for example, Testcontainers or the project's Docker Compose services) for a small number of high-value checks:
+
+- Each service's persistence adapter with its PostgreSQL database.
+- `resource-service` storage and messaging adapters with LocalStack S3 and RabbitMQ.
+- `resource-processor` message consumption and its HTTP calls to the resource and song services, using real local services or controlled HTTP stubs where appropriate.
+
+Focus on the important adapter operations and the upload-to-processing handoff. Keep these tests isolated, repeatable, and responsible for cleaning up their data. They complement component tests: the component tests mock external dependencies; integration tests verify selected real dependency connections and configuration.
 
 ## Contract tests
 
-There are 3 microservices involved into business flows, excluding Eureka server.
+Contract tests check that a consumer and provider agree on the shape and meaning of an interface. They are most useful at boundaries that can change independently:
 
-**Smallest units**:
-- resource-service talks to resource-db database (save, get by id, delete).
-- resource-service talks to RabbitMQ (send).
-- resource-service talks to AWS S3 LocalStack (create, read, delete).
-- resource-processor talks to resource-service (GET).
-- resource-processor talks to RabbitMQ (consume).
-- resource-processor talks to song-service (POST).
-- song-service talks to song-db database (save, get by id, delete).
+- `resource-processor` consuming the resource-upload message published by `resource-service` (including the message payload and relevant routing/configuration).
+- `resource-processor` calling `GET /resources/{id}` and `POST /songs`, including request/response fields, content types, and expected status codes.
+- The externally used `resource-service` and `song-service` REST endpoints, if their request or response formats change.
 
-**Contract Stability**:
-- REST controllers didn't receive any change to their interfaces for a long time.
-- resource-processor was implemented recently.
-- RabbitMQ uses only one topic for now. May have more topics/DLQ in the future.
+Validate only the interfaces used by these flows, especially the newer asynchronous processing flow, rather than writing a contract test for every database operation or for LocalStack. Database and S3 behavior belongs in integration tests. Contract tests can use lightweight fixtures or provider verification and do not need a full production-like deployment.
 
-#### Approach
-(Validate what hasn't been changed for a while? 
-Or validate what is a subject to change?
-Or validate all requests and responses between services, databases, RabbitMQ, but exclude LocalStack?
-I don't know)
+## End-to-end tests
 
+End-to-end tests start the services and required infrastructure together and verify a complete user-visible flow through the public API. Keep this suite very small because it is slower and more sensitive to environment setup.
 
-## End-to-End tests
+The primary smoke test should upload a valid MP3 through `POST /resources`, wait for the asynchronous processor to finish, and confirm the resulting song metadata through `GET /songs/{id}` (and, if useful, confirm the uploaded bytes through `GET /resources/{id}`). Clean up created resources and songs afterward. A failure should identify the overall flow that broke; detailed error cases should be covered at lower levels.
 
-There are services expose REST API to interact with the system:
-- resource-service: [ResourcesController.java](./resource-service/src/main/java/com/epam/resource/controller/ResourcesController.java)
-- song-service: [SongsController.java](./song-service/src/main/java/com/epam/song/controller/SongsController.java)
+Do not run the entire Postman collection as the end-to-end suite. Use it as a source of representative scenarios, while keeping only the critical happy path (and optionally one essential failure path) in the full-stack tests.
 
-Running the whole Postman collection against it, imagining production scale,
-is not a productive way: real HTTP requests are expensive, slow and don't cover 
-all possible scenarios. As the system grows, fewer scenarios will be covered.
+## How the levels work together
 
-#### Approach
-Run "Happy Path" requests only to ensure all endpoints work. This covers all microservices interactions.
+Unit tests provide fast feedback on business logic; component tests check each service's API and local request handling; integration tests exercise selected real database, storage, and broker connections; contract tests catch incompatible changes between independently developed services; and end-to-end smoke tests confirm that the critical flow works when deployed together. This gives balanced confidence without requiring 100% coverage or repeating every scenario at every level.
