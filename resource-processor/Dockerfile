@@ -18,15 +18,15 @@ RUN mvn clean package -Dmaven.test.skip=true
 # run module
 FROM eclipse-temurin:17-jre-alpine-3.21 AS run_module
 
+# install wget to 
+RUN apk add --no-cache wget
+
 ENV MODULE_ROOT_DIR=/resource-processor
 ENV APP_JAR_FILENAME=app.jar
 
 # default (root) workdir
 WORKDIR /
 COPY --from=build_module $MODULE_ROOT_DIR/target/*.jar app.jar
-
-# tells Docker the container will listen on that port internally
-EXPOSE 8101
 
 # run the app within the container
 CMD ["sh", "-c", "exec java -jar \"$APP_JAR_FILENAME\""]
