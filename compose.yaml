@@ -15,6 +15,11 @@ services:
       - "${HOST_PORT_RESOURCE_DB}:${CONTAINER_PORT_RESOURCE_DB}"  # Maps container port 5432 to host port 5432
     volumes:
       - ./init-scripts/resource-db:/docker-entrypoint-initdb.d # Places the init scripts in the container's init directory
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     # networks:
     #  - microservices-net 
 
@@ -28,21 +33,25 @@ services:
       - "${HOST_PORT_SONG_DB}:${CONTAINER_PORT_SONG_DB}"  # Maps container port 5432 to host port 5433 (to avoid conflict)
     volumes:
       - ./init-scripts/song-db:/docker-entrypoint-initdb.d # Places the init scripts in the container's init directory
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     # networks:
     #  - microservices-net
 
   localstack:
     image: localstack/localstack:latest
+    env_file:
+      - .localstack.env
     ports:
       - "${LOCALSTACK_PORT}:${LOCALSTACK_PORT}"
     environment:
-      SERVICES: s3
+      SERVICES: ${LOCALSTACK_SERVICES}
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
-      # Sign up at https://app.localstack.cloud, choose AWS and non-commercial usage
-      # and copy Personal Auth Token at "Getting Started" page
-      LOCALSTACK_AUTH_TOKEN: "ls-bAwOXezu-2374-BeKI-BIYi-ZiDA2460ea97"
-      DEBUG: -0
-      PERSISTENCE: -0
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+      PERSISTENCE: ${LOCALSTACK_PERSISTENCE:-0}
     healthcheck:
       test: ["CMD", "awslocal", "s3", "ls"]
       interval: 5s
