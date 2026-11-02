@@ -676,16 +676,16 @@
                   "pm.test(\"Request URL matches expected structure\", function () {\r",
                   "    var requestUrl = pm.request.url.toString();\r",
                   "    var songServiceUrl = pm.variables.get(\"song_service_url\");\r",
-                  "    var dynamicId = pm.variables.get(\"song_metadata_id\");\r",
+                  "    var dynamicId = pm.variables.get(\"id\");\r",
                   "    var expectedUrl = songServiceUrl + \"/songs/\" + dynamicId;\r",
                   "    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r",
                   "});\r",
                   "\r",
-                  "pm.test(\"Path variable 'song_metadata_id' is dynamic\", function () {\r",
+                  "pm.test(\"Path variable 'id' is dynamic\", function () {\r",
                   "    var requestUrl = pm.request.url.toString();\r",
-                  "    var dynamicId = pm.variables.get(\"song_metadata_id\");\r",
+                  "    var dynamicId = pm.variables.get(\"id\");\r",
                   "    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
-                  "    pm.expect(requestUrl, \"Expected request URL to include dynamic 'song_metadata_id'\").to.equal(expectedUrl);\r",
+                  "    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r",
                   "});\r",
                   "\r",
                   "pm.test(\"Status code is 404\", function () {\r",
@@ -730,7 +730,7 @@
                   "// Validate error message format matches specification exactly\r",
                   "pm.test(\"Error message matches specification format: 'Song metadata for ID=X not found'\", function () {\r",
                   "    var jsonData = pm.response.json();\r",
-                  "    var dynamicId = pm.variables.get(\"song_metadata_id\");\r",
+                  "    var dynamicId = pm.variables.get(\"id\");\r",
                   "    var expectedMessage = `Song metadata for ID=${dynamicId} not found`;\r",
                   "    pm.expect(jsonData.errorMessage, \"Error message should match specification format\").to.equal(expectedMessage);\r",
                   "});\r",
@@ -757,13 +757,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{song_service_url}}/songs/{{song_metadata_id}}",
+              "raw": "{{song_service_url}}/songs/{{id}}",
               "host": [
                 "{{song_service_url}}"
               ],
               "path": [
                 "songs",
-                "{{song_metadata_id}}"
+                "{{id}}"
               ]
             }
           },
