@@ -1,0 +1,89 @@
+{
+  "consumer": {
+    "name": "resource-upload-client"
+  },
+  "interactions": [
+    {
+      "description": "an upload with unsupported JSON content type",
+      "request": {
+        "body": {},
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/resources"
+      },
+      "response": {
+        "body": {
+          "errorCode": "400",
+          "errorMessage": "Invalid file format: application/json. Only MP3 files are allowed"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "status": 400
+      }
+    },
+    {
+      "description": "a binary MP3 upload",
+      "providerStates": [
+        {
+          "name": "resource upload dependencies are available"
+        }
+      ],
+      "request": {
+        "body": "SUQzAP8=",
+        "headers": {
+          "Content-Type": "audio/mpeg"
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "contentType",
+                  "value": "audio/mpeg"
+                }
+              ]
+            }
+          }
+        },
+        "method": "POST",
+        "path": "/resources"
+      },
+      "response": {
+        "body": {
+          "id": 42
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "body": {
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pact-jvm": {
+      "version": "4.6.14"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "resource-service"
+  }
+}

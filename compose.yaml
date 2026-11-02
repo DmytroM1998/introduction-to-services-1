@@ -1,5 +1,5 @@
 # For traditional app usage, deploy the databases and resource object storage
-# docker compose up -d resource-db song-db localstack
+# docker compose up -d resource-db song-db rabbitmq localstack
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build [--scale song-service=2]
