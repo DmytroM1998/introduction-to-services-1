@@ -17,8 +17,8 @@ COPY src/main/java ./src/main/java
 COPY src/main/resources ./src/main/resources
 COPY src/test/resources/contracts ./src/test/resources/contracts
 
-# build .jar file in /target dir. There are no unit tests, but still
-RUN mvn clean package -Dmaven.test.skip=true
+# Build .jar file in /target dir. Don't show libs being downloaded.
+RUN mvn clean package -Dmaven.test.skip=true --no-transfer-progress
 
 # run module
 FROM eclipse-temurin:17-jre-alpine-3.21 AS run_module
