@@ -99,6 +99,33 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+  
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    ports:
+      - "${API_GATEWAY_SERVER_PORT}:${API_GATEWAY_SERVER_PORT}"
+    environment:
+      API_GATEWAY_SERVER_APPLICATION_NAME: ${API_GATEWAY_SERVER_APPLICATION_NAME:-api-gateway}
+      API_GATEWAY_SERVER_PORT: ${API_GATEWAY_SERVER_PORT}
+      EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
+      RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
+      SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
+    healthcheck:
+      # Spring Boot Actuator health endpoint returns 200 OK when the gateway is UP
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${API_GATEWAY_SERVER_PORT}/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      eureka-server:
+        condition: service_healthy
 
   resource-service:
     build:
