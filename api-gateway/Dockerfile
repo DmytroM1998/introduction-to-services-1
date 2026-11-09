@@ -6,13 +6,14 @@ WORKDIR /api-gateway
 # Copy pom.xml first, then download dependencies
 COPY pom.xml .
 # Since no source code is introduced yet, this layer is cached if pom.xml doesn't change
-RUN mvn dependency:go-offline
+# Don't show libs being downloaded.
+RUN mvn dependency:go-offline --no-transfer-progress
 
 # Only then copy the source code and resources
 COPY src/main/java ./src/main/java
 COPY src/main/resources ./src/main/resources
 
-# Build .jar file in /target dir. Don't show libs being downloaded.
+# Build .jar file in /target dir
 RUN mvn clean package -Dmaven.test.skip=true --no-transfer-progress
 
 # run module

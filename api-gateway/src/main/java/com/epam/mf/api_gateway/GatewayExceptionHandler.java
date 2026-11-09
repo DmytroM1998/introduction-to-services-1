@@ -6,7 +6,6 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Instant;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.ErrorResponse;
@@ -36,7 +35,9 @@ public class GatewayExceptionHandler {
     if (exception instanceof ErrorResponse errorResponse) {
       resolvedStatus = HttpStatus.resolve(errorResponse.getStatusCode().value());
     }
-    return ObjectUtils.getIfNull(resolvedStatus, HttpStatus.INTERNAL_SERVER_ERROR);
+    return resolvedStatus != null 
+        ? resolvedStatus 
+        : HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
   private String getResponseMessage(HttpStatus status) {

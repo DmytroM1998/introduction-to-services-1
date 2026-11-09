@@ -23,9 +23,10 @@ Feature: Resource Upload, Retrieval and Lifecycle Management
     And the invalid format response matches the Postman specification for "<contentType>"
 
     Examples:
-      | contentType      |
-      | application/json |
-      | text/plain       |
+      | contentType                         |
+      | application/json                    |
+      | application/json;charset=UTF-8       |
+      | text/plain                           |
 
   Scenario: A database failure compensates the S3 upload without publishing
     Given a valid MP3 audio file
