@@ -10,7 +10,8 @@ WORKDIR $MODULE_ROOT_DIR
 # Copy pom.xml first, then download dependencies
 COPY pom.xml .
 # Since no source code is introduced yet, this layer is cached if pom.xml doesn't change
-RUN mvn dependency:go-offline
+# Don't show libs being downloaded.
+RUN mvn dependency:go-offline --no-transfer-progress
 
 # Only then copy the source code and resources
 COPY src/main/java ./src/main/java

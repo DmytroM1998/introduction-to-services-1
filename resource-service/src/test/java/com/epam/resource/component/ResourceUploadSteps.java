@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.RestTemplate;
@@ -236,10 +237,12 @@ public class ResourceUploadSteps {
     @Then("the invalid format response matches the Postman specification for {string}")
     public void invalidFormatResponseMatchesPostman(String contentType) throws IOException {
         JsonNode body = responseBody();
+        MediaType mediaType = MediaType.parseMediaType(contentType);
+        String expectedContentType = mediaType.getType() + "/" + mediaType.getSubtype();
         assertThat(lastResponse.getResponse().getContentType()).isEqualTo("application/json");
         assertThat(body.size()).isEqualTo(2);
         assertThat(body.path("errorMessage").asText())
-                .isEqualTo("Invalid file format: " + contentType + ". Only MP3 files are allowed");
+                .isEqualTo("Invalid file format: " + expectedContentType + ". Only MP3 files are allowed");
         assertThat(body.path("errorCode").asText()).isEqualTo("400");
         verifyNoInteractions(resourceRepository, s3Client, rabbitTemplate, restTemplate);
     }
