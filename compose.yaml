@@ -2,7 +2,8 @@
 # docker compose up -d resource-db song-db rabbitmq localstack
 
 # For full deployment to Docker, use the following command:
-# docker compose up -d --build [--scale song-service=2]
+# docker compose up -d --build --wait [--scale song-service=2] OR
+# docker compose --progress plain up -d --build
 
 services:
   resource-db:
@@ -15,6 +16,12 @@ services:
       - "${HOST_PORT_RESOURCE_DB}:${CONTAINER_PORT_RESOURCE_DB}"  # Maps container port 5432 to host port 5432
     volumes:
       - ./init-scripts/resource-db:/docker-entrypoint-initdb.d # Places the init scripts in the container's init directory
+    healthcheck:
+      # use built-in health check
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     # networks:
     #  - microservices-net 
 
@@ -28,22 +35,28 @@ services:
       - "${HOST_PORT_SONG_DB}:${CONTAINER_PORT_SONG_DB}"  # Maps container port 5432 to host port 5433 (to avoid conflict)
     volumes:
       - ./init-scripts/song-db:/docker-entrypoint-initdb.d # Places the init scripts in the container's init directory
+    healthcheck:
+      # use built-in health check
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     # networks:
     #  - microservices-net
 
   localstack:
     image: localstack/localstack:latest
+    env_file:
+      - .localstack.env
     ports:
       - "${LOCALSTACK_PORT}:${LOCALSTACK_PORT}"
     environment:
-      SERVICES: s3
+      SERVICES: ${LOCALSTACK_SERVICES}
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
-      # Sign up at https://app.localstack.cloud, choose AWS and non-commercial usage
-      # and copy Personal Auth Token at "Getting Started" page
-      LOCALSTACK_AUTH_TOKEN: "ls-bAwOXezu-2374-BeKI-BIYi-ZiDA2460ea97"
-      DEBUG: -0
-      PERSISTENCE: -0
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+      PERSISTENCE: ${LOCALSTACK_PERSISTENCE:-0}
     healthcheck:
+      # check if a list returns any S3 buckets
       test: ["CMD", "awslocal", "s3", "ls"]
       interval: 5s
       timeout: 5s
@@ -58,6 +71,7 @@ services:
       - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
       - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
     healthcheck:
+      # use built-in health check
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
@@ -73,6 +87,18 @@ services:
       - "${EUREKA_SERVER_PORT}:${EUREKA_SERVER_PORT}"
     environment:
       SERVER_PORT: ${EUREKA_SERVER_PORT}
+      EUREKA_SERVER_APPLICATION_NAME: ${EUREKA_SERVER_APPLICATION_NAME:-eureka-server}
+      EUREKA_SERVER_REGISTER_WITH_EUREKA: ${EUREKA_SERVER_REGISTER_WITH_EUREKA:-false}
+      EUREKA_SERVER_FETCH_REGISTRY: ${EUREKA_SERVER_FETCH_REGISTRY:-false}
+      EUREKA_SERVER_LOG_LEVEL: ${EUREKA_SERVER_LOG_LEVEL:-OFF}
+      EUREKA_DISCOVERY_LOG_LEVEL: ${EUREKA_DISCOVERY_LOG_LEVEL:-OFF}
+    healthcheck:
+      # send a GET request to see if it returns a 200 OK status
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/eureka/apps"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   resource-service:
     build:
@@ -84,29 +110,43 @@ services:
       - "${RESOURCE_SERVICE_SERVER_PORT}:${RESOURCE_SERVICE_SERVER_PORT}"
       - "${RESOURCE_SERVICE_DEBUG_HOST_PORT}:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}" # for JVM debugging
     environment:
-      EUREKA_SERVER_URL: "http://eureka-server:${EUREKA_SERVER_PORT}/eureka/"
+      RESOURCE_SERVICE_APPLICATION_NAME: ${RESOURCE_SERVICE_APPLICATION_NAME:-resource-service}
+      EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_RESOURCE_SERVICE}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD_RESOURCE_SERVICE}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-none}
+      SPRING_DOCKER_COMPOSE_ENABLED: ${SPRING_DOCKER_COMPOSE_ENABLED:-false}
       SERVER_PORT: ${RESOURCE_SERVICE_SERVER_PORT}
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
       SONG_SERVICE_SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
-      RESOURCE_STORAGE_ENDPOINT: http://localstack:4566
+      RESOURCE_STORAGE_ENDPOINT: ${RESOURCE_STORAGE_ENDPOINT:-http://localstack:4566}
       RESOURCE_STORAGE_BUCKET: ${RESOURCE_STORAGE_BUCKET:-resources}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
-      RESOURCE_RABBITMQ_EXCHANGE: resource.uploaded
+      RESOURCE_RABBITMQ_EXCHANGE: ${RESOURCE_RABBITMQ_EXCHANGE:-resource.uploaded}
+    healthcheck:
+      # send a GET request to see if it returns a 200 OK status
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
       resource-db:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
       localstack:
         condition: service_healthy
       rabbitmq:
@@ -118,22 +158,35 @@ services:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
-    ports:
-      - "${RESOURCE_PROCESSOR_SERVER_PORT}:${RESOURCE_PROCESSOR_SERVER_PORT}"
     environment:
-      SERVER_PORT: ${RESOURCE_PROCESSOR_SERVER_PORT}
-      EUREKA_SERVER_URL: "http://eureka-server:${EUREKA_SERVER_PORT}/eureka/"
+      RESOURCE_PROCESSOR_APPLICATION_NAME: ${RESOURCE_PROCESSOR_APPLICATION_NAME:-resource-processor}
+      RESOURCE_PROCESSOR_WEB_APPLICATION_TYPE: ${RESOURCE_PROCESSOR_WEB_APPLICATION_TYPE:-none}
+      EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
       RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
-      SPRING_RABBITMQ_HOST: rabbitmq
+      RESOURCE_PROCESSOR_FUNCTION_DEFINITION: ${RESOURCE_PROCESSOR_FUNCTION_DEFINITION:-resourceMessageListener}
+      RESOURCE_PROCESSOR_STREAM_GROUP: ${RESOURCE_PROCESSOR_STREAM_GROUP:-resource-processor}
+      SPRING_RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      eureka-server:
-        condition: service_started
+      RABBITMQ_MANAGEMENT_PORT: ${RABBITMQ_MANAGEMENT_PORT}
+      RESOURCE_PROCESSOR_QUEUE: ${RESOURCE_RABBITMQ_EXCHANGE:-resource.uploaded}.${RESOURCE_PROCESSOR_STREAM_GROUP:-resource-processor}
+    healthcheck:
+      # send a GET request to the RabbitMQ management API to check if the queue has at least one consumer
+      test: >-
+        wget -q -O -
+        --user="$${SPRING_RABBITMQ_USERNAME}"
+        --password="$${SPRING_RABBITMQ_PASSWORD}"
+        "http://$${SPRING_RABBITMQ_HOST}:$${RABBITMQ_MANAGEMENT_PORT}/api/queues/%2F/$${RESOURCE_PROCESSOR_QUEUE}"
+        | grep -Eq '"consumers"[[:space:]]*:[[:space:]]*[1-9][0-9]*'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    restart: on-failure
 
   song-service:
     build:
@@ -142,11 +195,11 @@ services:
       platforms:
         - linux/amd64
     # Fixed ports for 2 instances to be deployed (without --scale command)
-    deploy:
-      replicas: 2
-    ports:
-      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
-      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
+#    deploy:
+#      replicas: 2
+#    ports:
+#      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
+#      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
       
     # Dynamic ports for 2 instances to be deployed (using --scale command)
     # This way Docker Compose is asked to assign each replica a different available host port and forward it to the container’s Song Service port
@@ -154,19 +207,35 @@ services:
 #      - "${SONG_SERVICE_SERVER_PORT}"
       
     # Fixed ports for a single instance to be deployed
-#    ports:
-#      - "${SONG_SERVICE_SERVER_PORT}:${SONG_SERVICE_SERVER_PORT}" # 8092:8092
-#      - "${SONG_SERVICE_DEBUG_HOST_PORT}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}" # 5006:5005
+    ports:
+      - "${SONG_SERVICE_SERVER_PORT}:${SONG_SERVICE_SERVER_PORT}" # 8092:8092
+      - "${SONG_SERVICE_DEBUG_HOST_PORT}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}" # 5006:5005
     environment:
-      EUREKA_SERVER_URL: "http://eureka-server:${EUREKA_SERVER_PORT}/eureka/"
+      SONG_SERVICE_APPLICATION_NAME: ${SONG_SERVICE_APPLICATION_NAME:-song-service}
+      EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${SONG_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_SONG_SERVICE}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD_SONG_SERVICE}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-org.postgresql.Driver}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-none}
+      SPRING_DOCKER_COMPOSE_ENABLED: ${SPRING_DOCKER_COMPOSE_ENABLED:-false}
       SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
+    healthcheck:
+      # send a GET request to see if it returns a 200 OK status
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     depends_on:
-      - song-db
-      - eureka-server
+      song-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
       
 # the default network must be used by Module 2 rules
 #networks:
