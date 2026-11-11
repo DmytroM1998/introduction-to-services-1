@@ -1,5 +1,5 @@
 # For traditional app usage, deploy the databases and resource object storage
-# docker compose up -d resource-db song-db rabbitmq localstack
+# docker compose up -d resource-db song-db storage-db rabbitmq localstack
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build --wait [--scale song-service=2] OR
@@ -43,6 +43,22 @@ services:
       retries: 20
     # networks:
     #  - microservices-net
+
+  storage-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_STORAGE_SERVICE:-storage-db}
+      POSTGRES_USER: ${POSTGRES_USER_STORAGE_SERVICE:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_STORAGE_SERVICE:-postgres}
+    ports:
+      - "${HOST_PORT_STORAGE_DB:-5434}:${CONTAINER_PORT_STORAGE_DB:-5432}"
+    volumes:
+      - ./init-scripts/storage-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   localstack:
     image: localstack/localstack:latest
