@@ -1,6 +1,5 @@
 package com.microservice.storage.health;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.EurekaClient;
 import com.netflix.discovery.endpoint.EndpointUtils;
@@ -15,6 +14,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 @Component("storageEurekaHealthIndicator")
 public class EurekaHealthIndicator implements HealthIndicator {
@@ -59,14 +59,16 @@ public class EurekaHealthIndicator implements HealthIndicator {
         .encode()
         .toUri();
     try {
-      JsonNode response = restTemplate.getForObject(instanceUri, JsonNode.class);
-      JsonNode registeredInstance = response == null ? null : response.path("instance");
-      if (registeredInstance == null || registeredInstance.isMissingNode()) {
-        registeredInstance = response;
+      Map<?, ?> response = restTemplate.getForObject(instanceUri, Map.class);
+      if (response == null) {
+        return false;
       }
-      return registeredInstance != null
-          && localInstance.getId().equals(registeredInstance.path("instanceId").asText())
-          && InstanceInfo.InstanceStatus.UP.name().equals(registeredInstance.path("status").asText());
+      Object instance = response.get("instance");
+      Map<?, ?> registeredInstance = instance instanceof Map<?, ?> instanceDetails
+          ? instanceDetails
+          : response;
+      return localInstance.getId().equals(registeredInstance.get("instanceId"))
+          && InstanceInfo.InstanceStatus.UP.name().equals(registeredInstance.get("status"));
     } catch (RestClientException exception) {
       return false;
     }

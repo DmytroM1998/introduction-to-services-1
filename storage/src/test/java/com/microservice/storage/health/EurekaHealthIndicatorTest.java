@@ -1,7 +1,5 @@
 package com.microservice.storage.health;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.appinfo.ApplicationInfoManager;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.EurekaClient;
@@ -13,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,11 +45,11 @@ class EurekaHealthIndicatorTest {
 		when(builder.connectTimeout(any())).thenReturn(builder);
 		when(builder.readTimeout(any())).thenReturn(builder);
 		when(builder.build()).thenReturn(restTemplate);
-		JsonNode downResponse = new ObjectMapper().readTree(
-				"{\"instance\":{\"instanceId\":\"storage:8086\",\"status\":\"DOWN\"}}");
-		JsonNode upResponse = new ObjectMapper().readTree(
-				"{\"instance\":{\"instanceId\":\"storage:8086\",\"status\":\"UP\"}}");
-		when(restTemplate.getForObject(any(URI.class), eq(JsonNode.class)))
+		Map<String, Object> downResponse = Map.of(
+				"instance", Map.of("instanceId", "storage:8086", "status", "DOWN"));
+		Map<String, Object> upResponse = Map.of(
+				"instanceId", "storage:8086", "status", "UP");
+		when(restTemplate.getForObject(any(URI.class), eq(Map.class)))
 				.thenReturn(downResponse, upResponse);
 
 		EurekaHealthIndicator indicator = new EurekaHealthIndicator(clientProvider, builder);
