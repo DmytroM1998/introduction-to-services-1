@@ -25,7 +25,7 @@ public class ResourcesController {
 
   @PostMapping(consumes = "audio/mpeg")
   public ResponseEntity<Map<String, Long>> uploadResource(HttpServletRequest request) {
-    return new ResponseEntity<>(resourcesService.processAndSaveResource(request), HttpStatus.OK);
+    return new ResponseEntity<>(resourcesService.saveResourceAsStaging(request), HttpStatus.OK);
   }
   
   @GetMapping(value = "/{id}", produces = "audio/mpeg")

@@ -2,7 +2,10 @@ package com.epam.resource.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.epam.resource.repository.ResourceRepository;
+import com.epam.resource.dto.StorageDetails;
+import com.epam.resource.entity.StorageType;
 import com.epam.resource.service.RabbitMQService;
+import com.epam.resource.service.StorageLocationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,8 @@ import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -116,7 +121,6 @@ class ResourcesControllerIT {
         registry.add("resource.storage.region", localstack::getRegion);
         registry.add("resource.storage.access-key", localstack::getAccessKey);
         registry.add("resource.storage.secret-key", localstack::getSecretKey);
-        registry.add("resource.storage.bucket", () -> "test-resources");
 
         // RabbitMQ
         registry.add("spring.rabbitmq.host", rabbitmq::getHost);
@@ -151,12 +155,20 @@ class ResourcesControllerIT {
 
     @MockitoSpyBean
     RabbitMQService publisher;
+    @MockitoBean
+    StorageLocationService storageLocationService;
 
     private RabbitAdmin rabbitAdmin;
     private String notificationQueue;
 
     @BeforeEach
     void setupMock() {
+        StorageDetails staging = storage(StorageType.STAGING, "test-resources-staging");
+        StorageDetails permanent = storage(StorageType.PERMANENT, "test-resources-permanent");
+        Mockito.when(storageLocationService.getStorage(StorageType.STAGING)).thenReturn(staging);
+        Mockito.when(storageLocationService.getStorage(StorageType.PERMANENT)).thenReturn(permanent);
+        createBucketIfMissing(staging.getBucket());
+        createBucketIfMissing(permanent.getBucket());
         Mockito.when(restTemplateBean.exchange(
                 Mockito.anyString(),
                 Mockito.eq(HttpMethod.DELETE),
@@ -168,6 +180,25 @@ class ResourcesControllerIT {
         notificationQueue = rabbitAdmin.declareQueue(queue);
         rabbitAdmin.declareBinding(new Binding(notificationQueue, Binding.DestinationType.QUEUE,
                 "resource.uploaded", "resource.uploaded", null));
+    }
+
+    private void createBucketIfMissing(String bucket) {
+        try {
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+        } catch (S3Exception exception) {
+            if (exception.statusCode() != 404) {
+                throw exception;
+            }
+            s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
+        }
+    }
+
+    private static StorageDetails storage(StorageType type, String bucket) {
+        StorageDetails details = new StorageDetails();
+        details.setStorageType(type);
+        details.setBucket(bucket);
+        details.setPath(type == StorageType.STAGING ? "resources/staging/" : "resources/permanent/");
+        return details;
     }
 
     @AfterEach
@@ -204,7 +235,7 @@ class ResourcesControllerIT {
         var stored = resourceRepository.findById(resourceId).orElseThrow();
         URI location = URI.create(stored.getLocation());
         assertThat(location.getScheme()).isEqualTo("s3");
-        assertThat(location.getHost()).isEqualTo("test-resources");
+        assertThat(location.getHost()).isEqualTo("test-resources-staging");
         String objectKey = location.getPath().substring(1);
         var storedBytes = s3Client.getObjectAsBytes(GetObjectRequest.builder()
                 .bucket(location.getHost()).key(objectKey).build());
@@ -250,7 +281,7 @@ class ResourcesControllerIT {
     @Test
     void publicationFailsAfterPersistence_removesDatabaseRecordAndS3Object() {
         long recordsBefore = resourceRepository.count();
-        var listRequest = ListObjectsV2Request.builder().bucket("test-resources").build();
+        var listRequest = ListObjectsV2Request.builder().bucket("test-resources-staging").build();
         var objectsBefore = s3Client.listObjectsV2(listRequest).contents();
         Mockito.doThrow(new AmqpException("injected publication failure"))
                 .when(publisher).sendResourceId(Mockito.anyLong());

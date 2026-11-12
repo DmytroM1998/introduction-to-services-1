@@ -1,7 +1,10 @@
 package com.epam.resource.component;
 
 import com.epam.resource.entity.ResourceEntity;
+import com.epam.resource.dto.StorageDetails;
+import com.epam.resource.entity.StorageType;
 import com.epam.resource.repository.ResourceRepository;
+import com.epam.resource.service.StorageLocationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.java.Before;
@@ -70,6 +73,8 @@ public class ResourceUploadSteps {
     RabbitTemplate rabbitTemplate;
     @Autowired
     RestTemplate restTemplate;
+    @Autowired
+    StorageLocationService storageLocationService;
 
     private final Map<Long, ResourceEntity> resources = new HashMap<>();
     private final Map<String, byte[]> objects = new HashMap<>();
@@ -79,12 +84,17 @@ public class ResourceUploadSteps {
 
     @Before
     public void resetState() {
-        reset(resourceRepository, s3Client, rabbitTemplate, restTemplate);
+        reset(resourceRepository, s3Client, rabbitTemplate, restTemplate, storageLocationService);
         resources.clear();
         objects.clear();
         fileBytes = null;
         lastResponse = null;
         recordedId = null;
+        StorageDetails staging = new StorageDetails();
+        staging.setStorageType(StorageType.STAGING);
+        staging.setBucket("resources-staging");
+        staging.setPath("resources/staging/");
+        when(storageLocationService.getStorage(StorageType.STAGING)).thenReturn(staging);
         AtomicLong nextId = new AtomicLong();
 
         when(resourceRepository.save(any(ResourceEntity.class))).thenAnswer(call -> {

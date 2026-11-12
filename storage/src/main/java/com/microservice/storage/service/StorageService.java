@@ -2,22 +2,24 @@ package com.microservice.storage.service;
 
 import com.microservice.storage.dto.StorageDto;
 import com.microservice.storage.entity.StorageEntity;
+import com.microservice.storage.entity.StorageType;
 import com.microservice.storage.exception.ErrorCodeException;
 import com.microservice.storage.repo.StorageRepository;
 import com.microservice.storage.util.StorageMapper;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class StorageService {
 
   private static final int IDS_STRING_MAX_LENGTH = 200;
@@ -26,7 +28,7 @@ public class StorageService {
   private StorageRepository storageRepository;
 
   public Long createStorage(StorageDto storageDto) {
-    var storage = StorageMapper.toEntity(storageDto);
+    StorageEntity storage = StorageMapper.toEntity(storageDto);
     storage.setId(null);
     return storageRepository.save(storage).getId();
   }
@@ -39,25 +41,9 @@ public class StorageService {
 
   @Transactional
   public List<Long> deleteStoragesByIds(String ids) {
-    validateStorageIdsLength(ids);
-    if (ids == null || !IDS_PATTERN.matcher(ids).matches()) {
-      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(), "CSV string must contain comma-separated positive integer IDs");
-    }
-
-    Set<Long> parsedIds = new LinkedHashSet<>();
-    try {
-      for (String id : ids.split(",")) {
-        long parsedId = Long.parseLong(id);
-        if (parsedId <= 0) {
-          throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(), "Storage IDs must be positive integers");
-        }
-        parsedIds.add(parsedId);
-      }
-    } catch (NumberFormatException e) {
-      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(), "CSV string contains an invalid storage ID");
-    }
-
-    var storages = storageRepository.findAllById(parsedIds);
+    validateStorageIds(ids);
+    List<Long> parsedIds = parseStorageIds(ids);
+    List<StorageEntity> storages = storageRepository.findAllById(parsedIds);
     Set<Long> existingIds = storages.stream()
         .map(StorageEntity::getId)
         .collect(Collectors.toSet());
@@ -68,11 +54,45 @@ public class StorageService {
     return deletedIds;
   }
 
-  private void validateStorageIdsLength(String ids) {
-    if (ids == null || ids.length() >= IDS_STRING_MAX_LENGTH) {
-      int length = ids == null ? 0 : ids.length();
+  private void validateStorageIds(String ids) {
+    if (!IDS_PATTERN.matcher(ids).matches()) {
+      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(), 
+          "CSV string must contain comma-separated positive integer IDs");
+    }
+    if (ids.length() >= IDS_STRING_MAX_LENGTH) {
       throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
-          String.format("CSV string is invalid or too long: received %s characters, maximum allowed is less than %s", length, IDS_STRING_MAX_LENGTH));
+          String.format("CSV string is too long: received %s characters, maximum allowed is %s",
+              ids.length(), IDS_STRING_MAX_LENGTH));
+    }
+  }
+
+  private List<Long> parseStorageIds(String ids) {
+    AtomicReference<String> invalidValue = new AtomicReference<>("");
+    try {
+      return Arrays.stream(ids.split(","))
+          .map(id -> mapAndReturnInvalidLong(id, invalidValue))
+          .peek(id -> validateIdRange(id, invalidValue))
+          .toList();
+    } catch (NumberFormatException e) {
+      log.error("Invalid resource ID: {}", invalidValue.get(), e);
+      throw new ErrorCodeException(HttpStatus.BAD_REQUEST.value(),
+          String.format("Invalid ID format: '%s'. Only positive integers are allowed", invalidValue.get()));
+    }
+  }
+
+  private static long mapAndReturnInvalidLong(String id, AtomicReference<String> invalidValue) {
+    try {
+      return Long.parseLong(id);
+    } catch (NumberFormatException e) {
+      invalidValue.set(id);
+      throw e;
+    }
+  }
+
+  private void validateIdRange(Long parsedId, AtomicReference<String> invalidValue) {
+    if (parsedId <= 0) {
+      invalidValue.set(String.valueOf(parsedId));
+      throw new NumberFormatException("Resource ID must be positive");
     }
   }
 }

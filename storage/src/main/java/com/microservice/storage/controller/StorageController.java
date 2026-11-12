@@ -1,6 +1,7 @@
 package com.microservice.storage.controller;
 
 import com.microservice.storage.dto.StorageDto;
+import com.microservice.storage.entity.StorageType;
 import com.microservice.storage.service.StorageService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;

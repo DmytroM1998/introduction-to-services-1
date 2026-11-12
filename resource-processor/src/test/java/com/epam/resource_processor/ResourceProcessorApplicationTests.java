@@ -41,9 +41,10 @@ class ResourceProcessorApplicationTests {
 
 	@Test
 	void uploadedJsonResourceId_fetchesParsesAndSubmitsMetadata() throws IOException {
+		long resourceIdToSave = 42L;
 		try (InputStream sample = getClass().getResourceAsStream("/valid-sample.mp3")) {
 			assertThat(sample).isNotNull();
-			when(communicationService.requestResourceBinary(42L)).thenReturn(sample.readAllBytes());
+			when(communicationService.requestResourceBinary(resourceIdToSave)).thenReturn(sample.readAllBytes());
 		}
 
 		input.send(MessageBuilder.withPayload("42".getBytes(StandardCharsets.UTF_8))
@@ -52,13 +53,14 @@ class ResourceProcessorApplicationTests {
 
 		ArgumentCaptor<SongDto> song = ArgumentCaptor.forClass(SongDto.class);
 		var order = inOrder(communicationService);
-		order.verify(communicationService).requestResourceBinary(42L);
-		order.verify(communicationService).saveSongMetadata(eq(42L), song.capture());
+		order.verify(communicationService).requestResourceBinary(resourceIdToSave);
+		order.verify(communicationService).saveSongMetadata(eq(resourceIdToSave), song.capture());
+		order.verify(communicationService).notifyResourceProcessed(resourceIdToSave);
 		order.verifyNoMoreInteractions();
 		assertThat(song.getValue())
 				.extracting(SongDto::getId, SongDto::getName, SongDto::getArtist,
 						SongDto::getAlbum, SongDto::getDuration, SongDto::getYear)
-				.containsExactly(42L, "Test Title", "Test Artist", "Test Album", "00:07", "2025");
+				.containsExactly(resourceIdToSave, "Test Title", "Test Artist", "Test Album", "00:07", "2025");
 	}
 
 }

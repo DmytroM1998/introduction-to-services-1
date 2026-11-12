@@ -11,7 +11,10 @@ import au.com.dius.pact.provider.junitsupport.State;
 import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
 import au.com.dius.pact.provider.spring.junit5.MockMvcTestTarget;
 import com.epam.resource.entity.ResourceEntity;
+import com.epam.resource.dto.StorageDetails;
+import com.epam.resource.entity.StorageType;
 import com.epam.resource.repository.ResourceRepository;
+import com.epam.resource.service.StorageLocationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,7 +48,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
         "eureka.client.enabled=false",
-        "resource.storage.bucket=resources",
         "resource.rabbitmq.exchange=resource.uploaded"
 })
 @AutoConfigureMockMvc
@@ -61,9 +63,16 @@ public class ResourceUploadPactProviderTest {
     RabbitTemplate rabbitTemplate;
     @MockitoBean
     RestTemplate restTemplate;
+    @MockitoBean
+    StorageLocationService storageLocationService;
 
     @BeforeEach
     void configureTarget(PactVerificationContext context) {
+        StorageDetails staging = new StorageDetails();
+        staging.setStorageType(StorageType.STAGING);
+        staging.setBucket("resources-staging");
+        staging.setPath("resources/staging/");
+        when(storageLocationService.getStorage(StorageType.STAGING)).thenReturn(staging);
         if (context.getInteraction() instanceof MessageInteraction) {
             context.setTarget(new MessageTestTarget(List.of("com.epam.resource.contract")));
         } else {

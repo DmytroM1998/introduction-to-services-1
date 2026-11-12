@@ -1,6 +1,7 @@
 package com.epam.resource.component;
 
 import com.epam.resource.repository.ResourceRepository;
+import com.epam.resource.service.StorageLocationService;
 import io.cucumber.spring.CucumberContextConfiguration;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,7 +15,6 @@ import software.amazon.awssdk.services.s3.S3Client;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
         "eureka.client.enabled=false",
-        "resource.storage.bucket=resources",
         "resource.rabbitmq.exchange=resource.uploaded",
         "song.service.ref.name=song-service"
 })
@@ -32,4 +32,7 @@ public class CucumberSpringConfiguration {
 
     @MockitoBean
     RestTemplate restTemplate;
+
+    @MockitoBean
+    StorageLocationService storageLocationService;
 }
