@@ -58,9 +58,10 @@ class ResourceUploadedPactConsumerTest {
     @Test
     @PactTestFor(pactMethod = "uploadedResource")
     void contractNotificationOnConfiguredBinding_submitsParsedMetadata(MessagePact pact) throws IOException {
+        long resourceIdToProcess = 42L;
         try (InputStream sample = getClass().getResourceAsStream("/valid-sample.mp3")) {
             assertThat(sample).isNotNull();
-            when(communicationService.requestResourceBinary(42L)).thenReturn(sample.readAllBytes());
+            when(communicationService.requestResourceBinary(resourceIdToProcess)).thenReturn(sample.readAllBytes());
         }
 
         var message = pact.getMessages().get(0);
@@ -69,10 +70,11 @@ class ResourceUploadedPactConsumerTest {
                 .setHeader("contentType", message.getMetadata().get("contentType")).build(),
                 message.getMetadata().get("exchange").toString());
 
-        verify(communicationService).requestResourceBinary(42L);
+        verify(communicationService).requestResourceBinary(resourceIdToProcess);
         ArgumentCaptor<SongDto> song = ArgumentCaptor.forClass(SongDto.class);
-        verify(communicationService).saveSongMetadata(eq(42L), song.capture());
-        assertThat(song.getValue().getId()).isEqualTo(42L);
+        verify(communicationService).saveSongMetadata(eq(resourceIdToProcess), song.capture());
+        verify(communicationService).notifyResourceProcessed(resourceIdToProcess);
+        assertThat(song.getValue().getId()).isEqualTo(resourceIdToProcess);
         assertThat(song.getValue().getName()).isEqualTo("Test Title");
     }
 }

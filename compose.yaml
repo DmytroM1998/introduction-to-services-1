@@ -1,5 +1,5 @@
 # For traditional app usage, deploy the databases and resource object storage
-# docker compose up -d resource-db song-db rabbitmq localstack
+# docker compose up -d resource-db song-db storage-db rabbitmq localstack
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build --wait [--scale song-service=2] OR
@@ -23,7 +23,7 @@ services:
       timeout: 5s
       retries: 20
     # networks:
-    #  - microservices-net 
+    #  - microservices-net
 
   song-db:
     image: postgres:17-alpine
@@ -44,6 +44,59 @@ services:
     # networks:
     #  - microservices-net
 
+  storage-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_STORAGE_SERVICE}
+      POSTGRES_USER: ${POSTGRES_USER_STORAGE_SERVICE}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_STORAGE_SERVICE}
+    ports:
+      - "${HOST_PORT_STORAGE_DB}:${CONTAINER_PORT_STORAGE_DB}"
+    volumes:
+      - ./init-scripts/storage-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  storage:
+    build:
+      context: ./storage
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    ports:
+      - "${STORAGE_SERVER_PORT}:${STORAGE_SERVER_PORT}"
+    environment:
+      STORAGE_SERVICE_REF_NAME: ${STORAGE_SERVICE_REF_NAME}
+      STORAGE_SERVER_PORT: ${STORAGE_SERVER_PORT}
+      SPRING_DATASOURCE_URL: ${STORAGE_DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_STORAGE_SERVICE}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD_STORAGE_SERVICE}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+      SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      STAGING_STORAGE_BUCKET: ${STAGING_STORAGE_BUCKET}
+      PERMANENT_STORAGE_BUCKET: ${PERMANENT_STORAGE_BUCKET}
+      STAGING_STORAGE_PATH: ${STAGING_STORAGE_PATH}
+      PERMANENT_STORAGE_PATH: ${PERMANENT_STORAGE_PATH}
+      EUREKA_SERVER_URL: ${EUREKA_SERVER_URL}
+      EUREKA_CLIENT_FETCH_REGISTRY: ${EUREKA_CLIENT_FETCH_REGISTRY}
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
+    depends_on:
+      storage-db:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${STORAGE_SERVER_PORT}/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   localstack:
     image: localstack/localstack:latest
     env_file:
@@ -55,6 +108,10 @@ services:
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
       DEBUG: ${LOCALSTACK_DEBUG:-0}
       PERSISTENCE: ${LOCALSTACK_PERSISTENCE:-0}
+      STAGING_STORAGE_BUCKET: ${STAGING_STORAGE_BUCKET}
+      PERMANENT_STORAGE_BUCKET: ${PERMANENT_STORAGE_BUCKET}
+    volumes:
+      - ./init-scripts/localstack/ready.d:/etc/localstack/init/ready.d
     healthcheck:
       # check if a list returns any S3 buckets
       test: ["CMD", "awslocal", "s3", "ls"]
@@ -76,7 +133,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    
+
   eureka-server:
     build:
       context: ./server
@@ -99,7 +156,7 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
-  
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -112,8 +169,8 @@ services:
       API_GATEWAY_SERVER_APPLICATION_NAME: ${API_GATEWAY_SERVER_APPLICATION_NAME:-api-gateway}
       API_GATEWAY_SERVER_PORT: ${API_GATEWAY_SERVER_PORT}
       EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
-      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
-      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
       RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
     healthcheck:
@@ -139,8 +196,8 @@ services:
     environment:
       RESOURCE_SERVICE_APPLICATION_NAME: ${RESOURCE_SERVICE_APPLICATION_NAME:-resource-service}
       EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
-      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
-      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${RESOURCE_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_RESOURCE_SERVICE}
@@ -153,15 +210,36 @@ services:
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
       SONG_SERVICE_SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
       RESOURCE_STORAGE_ENDPOINT: ${RESOURCE_STORAGE_ENDPOINT:-http://localstack:4566}
-      RESOURCE_STORAGE_BUCKET: ${RESOURCE_STORAGE_BUCKET:-resources}
+
+      # Localstack
+      STAGING_STORAGE_BUCKET: ${STAGING_STORAGE_BUCKET}
+      PERMANENT_STORAGE_BUCKET: ${PERMANENT_STORAGE_BUCKET}
+      STAGING_STORAGE_PATH: ${STAGING_STORAGE_PATH}
+      PERMANENT_STORAGE_PATH: ${PERMANENT_STORAGE_PATH}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+
+      # Storage Service
+      STORAGE_SERVICE_REF_NAME: ${STORAGE_SERVICE_REF_NAME}
+      STORAGE_SERVICE_URL: http://storage:${STORAGE_SERVER_PORT}
+
+      # Circuit Breaker parameters
+      STORAGE_CIRCUIT_BREAKER_WINDOW_SIZE: ${STORAGE_CIRCUIT_BREAKER_WINDOW_SIZE}
+      STORAGE_CIRCUIT_BREAKER_MINIMUM_CALLS: ${STORAGE_CIRCUIT_BREAKER_MINIMUM_CALLS}
+      STORAGE_CIRCUIT_BREAKER_FAILURE_RATE: ${STORAGE_CIRCUIT_BREAKER_FAILURE_RATE}
+      STORAGE_CIRCUIT_BREAKER_OPEN_DURATION: ${STORAGE_CIRCUIT_BREAKER_OPEN_DURATION}
+      STORAGE_CIRCUIT_BREAKER_HALF_OPEN_CALLS: ${STORAGE_CIRCUIT_BREAKER_HALF_OPEN_CALLS}
+
+      # RabbitMQ
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: ${RABBITMQ_PORT}
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-app}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
       RESOURCE_RABBITMQ_EXCHANGE: ${RESOURCE_RABBITMQ_EXCHANGE:-resource.uploaded}
+      RESOURCE_PROCESSED_EXCHANGE: ${RESOURCE_PROCESSED_EXCHANGE:-resource.processed}
+      RESOURCE_PROCESSED_QUEUE: ${RESOURCE_PROCESSED_QUEUE:-resource.processed}
+      RESOURCE_PROCESSED_ROUTING_KEY: ${RESOURCE_PROCESSED_ROUTING_KEY:-resource.processed}
     healthcheck:
       # send a GET request to see if it returns a 200 OK status
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/health"]
@@ -189,8 +267,8 @@ services:
       RESOURCE_PROCESSOR_APPLICATION_NAME: ${RESOURCE_PROCESSOR_APPLICATION_NAME:-resource-processor}
       RESOURCE_PROCESSOR_WEB_APPLICATION_TYPE: ${RESOURCE_PROCESSOR_WEB_APPLICATION_TYPE:-none}
       EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
-      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
-      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
       RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
       RESOURCE_PROCESSOR_FUNCTION_DEFINITION: ${RESOURCE_PROCESSOR_FUNCTION_DEFINITION:-resourceMessageListener}
@@ -201,6 +279,8 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-app}
       RABBITMQ_MANAGEMENT_PORT: ${RABBITMQ_MANAGEMENT_PORT}
       RESOURCE_PROCESSOR_QUEUE: ${RESOURCE_RABBITMQ_EXCHANGE:-resource.uploaded}.${RESOURCE_PROCESSOR_STREAM_GROUP:-resource-processor}
+      RESOURCE_PROCESSED_EXCHANGE: ${RESOURCE_PROCESSED_EXCHANGE:-resource.processed}
+      RESOURCE_PROCESSED_ROUTING_KEY: ${RESOURCE_PROCESSED_ROUTING_KEY:-resource.processed}
     healthcheck:
       # send a GET request to the RabbitMQ management API to check if the queue has at least one consumer
       test: >-
@@ -214,6 +294,11 @@ services:
       retries: 12
       start_period: 60s
     restart: on-failure
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      resource-service:
+        condition: service_healthy
 
   song-service:
     build:
@@ -227,12 +312,12 @@ services:
 #    ports:
 #      - "${SONG_SERVICE_SERVER_PORT}-${SONG_SERVICE_SERVER_PORT_2ND_SERVICE}:${SONG_SERVICE_SERVER_PORT}"
 #      - "${SONG_SERVICE_DEBUG_HOST_PORT}-${SONG_SERVICE_DEBUG_HOST_PORT_2ND_SERVICE}:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
-      
+
     # Dynamic ports for 2 instances to be deployed (using --scale command)
     # This way Docker Compose is asked to assign each replica a different available host port and forward it to the container’s Song Service port
     ports:
       - "${SONG_SERVICE_SERVER_PORT}"
-      
+
     # Fixed ports for a single instance to be deployed
 #    ports:
 #      - "${SONG_SERVICE_SERVER_PORT}:${SONG_SERVICE_SERVER_PORT}" # 8092:8092
@@ -240,8 +325,8 @@ services:
     environment:
       SONG_SERVICE_APPLICATION_NAME: ${SONG_SERVICE_APPLICATION_NAME:-song-service}
       EUREKA_SERVER_URL: http://${EUREKA_SERVER_HOST:-eureka-server}:${EUREKA_SERVER_PORT}/eureka/
-      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS:-5}
-      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS:-5}
+      EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS}
+      EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${SONG_SERVICE_DEBUG_CONTAINER_PORT}"
       SPRING_DATASOURCE_URL: ${SONG_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER_SONG_SERVICE}
@@ -263,7 +348,7 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      
+
 # the default network must be used by Module 2 rules
 #networks:
 #  microservices-net:

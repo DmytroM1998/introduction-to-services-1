@@ -1,7 +1,9 @@
 package com.epam.resource.service;
 
 import com.epam.resource.config.RetryConfiguration;
+import com.epam.resource.dto.StorageDetails;
 import com.epam.resource.entity.ResourceEntity;
+import com.epam.resource.entity.StorageType;
 import com.epam.resource.exception.ErrorCodeException;
 import com.epam.resource.repository.ResourceRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,9 +40,10 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ResourcesServiceTest {
 
-    private static final String KEY = "resources/upload.mp3";
-    private static final String LOCATION = "s3://resources/" + KEY;
+    private static final String KEY = "resources/staging/upload.mp3";
+    private static final String LOCATION = "s3://resources-staging/" + KEY;
     private static final byte[] AUDIO = "ID3 test bytes".getBytes(StandardCharsets.UTF_8);
+    private static final StorageDetails STAGING = storage(StorageType.STAGING, "resources-staging");
 
     @Mock
     RabbitMQService publisher;
@@ -51,6 +54,8 @@ class ResourcesServiceTest {
     @Mock
     S3BucketService storage;
     @Mock
+    StorageLocationService storageLocationService;
+    @Mock
     HttpServletRequest unreadableRequest;
 
     private ResourcesService service;
@@ -59,19 +64,19 @@ class ResourcesServiceTest {
     void setUp() {
         var retry = new RetryConfiguration().retryTemplate();
         retry.setBackOffPolicy(new NoBackOffPolicy());
-        service = new ResourcesService(publisher, repository, songClient, retry, storage);
+        service = new ResourcesService(publisher, repository, songClient, retry, storage, storageLocationService);
     }
 
     @Test
     void validUploadWithAvailableDependencies_returnsIdAfterOrderedWrites() {
         ResourceEntity saved = givenStorageAndSavedResource();
 
-        assertThat(service.processAndSaveResource(request())).isEqualTo(Map.of("id", 42L));
+        assertThat(service.saveResourceAsStaging(request())).isEqualTo(Map.of("id", 42L));
 
         var order = inOrder(storage, repository, publisher);
-        order.verify(storage).generateMp3ResourceObjectKey();
-        order.verify(storage).getResourceStorageBucketLocation(KEY);
-        order.verify(storage).saveFileInS3StorageBucket(KEY, AUDIO);
+        order.verify(storage).generateMp3ResourceObjectKey("resources/staging/");
+        order.verify(storage).getResourceStorageBucketLocation(STAGING, KEY);
+        order.verify(storage).saveFileInS3StorageBucket("resources-staging", KEY, AUDIO);
         ArgumentCaptor<ResourceEntity> record = ArgumentCaptor.forClass(ResourceEntity.class);
         order.verify(repository).save(record.capture());
         assertThat(record.getValue().getLocation()).isEqualTo(LOCATION);
@@ -85,24 +90,24 @@ class ResourcesServiceTest {
     void processAndSaveResource_unreadableRequest_throwsServerError() throws IOException {
         when(unreadableRequest.getInputStream()).thenThrow(new IOException("request disconnected"));
 
-        assertThatThrownBy(() -> service.processAndSaveResource(unreadableRequest))
+        assertThatThrownBy(() -> service.saveResourceAsStaging(unreadableRequest))
                 .isInstanceOfSatisfying(ErrorCodeException.class, failure -> {
                     assertThat(failure.getErrorCode()).isEqualTo(500);
                     assertThat(failure.getMessage()).isEqualTo("Something went wrong");
                 });
 
-        verifyNoInteractions(storage, repository, publisher, songClient);
+        verifyNoInteractions(storage, storageLocationService, repository, publisher, songClient);
     }
 
     @Test
     void processAndSaveResource_storageFailure_cleansUpWithoutSaving() {
         givenStorageLocation();
         RuntimeException failure = new IllegalStateException("storage unavailable");
-        doThrow(failure).when(storage).saveFileInS3StorageBucket(KEY, AUDIO);
+        doThrow(failure).when(storage).saveFileInS3StorageBucket("resources-staging", KEY, AUDIO);
 
-        assertThatThrownBy(() -> service.processAndSaveResource(request())).isSameAs(failure);
+        assertThatThrownBy(() -> service.saveResourceAsStaging(request())).isSameAs(failure);
 
-        verify(storage).deleteObjectOnRollback(KEY, failure);
+        verify(storage).deleteObjectOnRollback("resources-staging", KEY, failure);
         verifyNoInteractions(repository, publisher, songClient);
     }
 
@@ -112,11 +117,11 @@ class ResourcesServiceTest {
         var failure = new DataIntegrityViolationException("save rejected");
         when(repository.save(any(ResourceEntity.class))).thenThrow(failure);
 
-        assertThatThrownBy(() -> service.processAndSaveResource(request())).isSameAs(failure);
+        assertThatThrownBy(() -> service.saveResourceAsStaging(request())).isSameAs(failure);
 
         verify(repository).save(any(ResourceEntity.class));
         verify(repository, never()).delete(any(ResourceEntity.class));
-        verify(storage).deleteObjectOnRollback(KEY, failure);
+        verify(storage).deleteObjectOnRollback("resources-staging", KEY, failure);
         verifyNoInteractions(publisher, songClient);
     }
 
@@ -128,12 +133,12 @@ class ResourcesServiceTest {
                 .thenThrow(new TransientDataAccessResourceException("temporary database failure"))
                 .thenReturn(saved);
 
-        assertThat(service.processAndSaveResource(request())).containsEntry("id", 42L);
+        assertThat(service.saveResourceAsStaging(request())).containsEntry("id", 42L);
 
         verify(repository, times(2)).save(any(ResourceEntity.class));
-        verify(storage).saveFileInS3StorageBucket(KEY, AUDIO);
+        verify(storage).saveFileInS3StorageBucket("resources-staging", KEY, AUDIO);
         verify(publisher).sendResourceId(42L);
-        verify(storage, never()).deleteObjectOnRollback(any(), any());
+        verify(storage, never()).deleteObjectOnRollback(any(), any(), any());
     }
 
     @Test
@@ -142,12 +147,12 @@ class ResourcesServiceTest {
         doThrow(new AmqpTimeoutException("temporary broker failure")).doNothing()
                 .when(publisher).sendResourceId(42L);
 
-        assertThat(service.processAndSaveResource(request())).containsEntry("id", 42L);
+        assertThat(service.saveResourceAsStaging(request())).containsEntry("id", 42L);
 
-        verify(storage).saveFileInS3StorageBucket(KEY, AUDIO);
+        verify(storage).saveFileInS3StorageBucket("resources-staging", KEY, AUDIO);
         verify(repository).save(any(ResourceEntity.class));
         verify(publisher, times(2)).sendResourceId(42L);
-        verify(storage, never()).deleteObjectOnRollback(any(), any());
+        verify(storage, never()).deleteObjectOnRollback(any(), any(), any());
     }
 
     @Test
@@ -156,16 +161,16 @@ class ResourcesServiceTest {
         var failure = new AmqpTimeoutException("broker still unavailable");
         doThrow(failure).when(publisher).sendResourceId(42L);
 
-        assertThatThrownBy(() -> service.processAndSaveResource(request())).isSameAs(failure);
+        assertThatThrownBy(() -> service.saveResourceAsStaging(request())).isSameAs(failure);
 
         verify(publisher, times(3)).sendResourceId(42L);
         var cleanup = inOrder(repository, storage);
-        cleanup.verify(storage).generateMp3ResourceObjectKey();
-        cleanup.verify(storage).getResourceStorageBucketLocation(KEY);
-        cleanup.verify(storage).saveFileInS3StorageBucket(KEY, AUDIO);
+        cleanup.verify(storage).generateMp3ResourceObjectKey("resources/staging/");
+        cleanup.verify(storage).getResourceStorageBucketLocation(STAGING, KEY);
+        cleanup.verify(storage).saveFileInS3StorageBucket("resources-staging", KEY, AUDIO);
         cleanup.verify(repository).save(any(ResourceEntity.class));
         cleanup.verify(repository).delete(saved);
-        cleanup.verify(storage).deleteObjectOnRollback(KEY, failure);
+        cleanup.verify(storage).deleteObjectOnRollback("resources-staging", KEY, failure);
         verifyNoInteractions(songClient);
     }
 
@@ -177,18 +182,39 @@ class ResourcesServiceTest {
         doThrow(failure).when(publisher).sendResourceId(42L);
         doThrow(cleanupFailure).when(repository).delete(saved);
 
-        assertThatThrownBy(() -> service.processAndSaveResource(request()))
+        assertThatThrownBy(() -> service.saveResourceAsStaging(request()))
                 .isSameAs(failure).hasSuppressedException(cleanupFailure);
 
         verify(publisher).sendResourceId(42L);
         verify(repository).delete(saved);
-        verify(storage).deleteObjectOnRollback(KEY, failure);
+        verify(storage).deleteObjectOnRollback("resources-staging", KEY, failure);
         verifyNoMoreInteractions(publisher);
     }
 
+    @Test
+    void promoteResourceToPermanent_copiesFileUpdatesDatabaseThenDeletesStagingCopy() {
+        when(storageLocationService.getStorage(StorageType.STAGING)).thenReturn(STAGING);
+        StorageDetails permanent = storage(StorageType.PERMANENT, "resources-permanent");
+        permanent.setPath("resources/permanent/");
+        ResourceEntity resource = savedResource();
+        when(repository.findById(42L)).thenReturn(java.util.Optional.of(resource));
+        when(storageLocationService.getStorage(StorageType.PERMANENT)).thenReturn(permanent);
+        when(storage.copyObjectToStorage(LOCATION, STAGING, permanent))
+                .thenReturn("s3://resources-permanent/resources/permanent/upload.mp3");
+
+        service.promoteResourceToPermanent(42L);
+
+        assertThat(resource.getLocation()).isEqualTo("s3://resources-permanent/resources/permanent/upload.mp3");
+        var order = inOrder(storage, repository);
+        order.verify(storage).copyObjectToStorage(LOCATION, STAGING, permanent);
+        order.verify(repository).save(resource);
+        order.verify(storage).deleteObject(LOCATION);
+    }
+
     private void givenStorageLocation() {
-        when(storage.generateMp3ResourceObjectKey()).thenReturn(KEY);
-        when(storage.getResourceStorageBucketLocation(KEY)).thenReturn(LOCATION);
+        when(storageLocationService.getStorage(StorageType.STAGING)).thenReturn(STAGING);
+        when(storage.generateMp3ResourceObjectKey("resources/staging/")).thenReturn(KEY);
+        when(storage.getResourceStorageBucketLocation(STAGING, KEY)).thenReturn(LOCATION);
     }
 
     private ResourceEntity givenStorageAndSavedResource() {
@@ -209,5 +235,13 @@ class ResourcesServiceTest {
         request.setContent(AUDIO);
         request.setContentType("audio/mpeg");
         return request;
+    }
+
+    private static StorageDetails storage(StorageType type, String bucket) {
+        StorageDetails storage = new StorageDetails();
+        storage.setStorageType(type);
+        storage.setBucket(bucket);
+        storage.setPath("resources/staging/");
+        return storage;
     }
 }

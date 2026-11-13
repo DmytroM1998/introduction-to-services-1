@@ -17,6 +17,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.time.Duration;
 import java.util.List;
 
+// Spring Actuator usage for health is demonstrated in Storage service. See:
+// storage/src/main/resources/application.properties
+// EurekaHealthIndicator.java
 @RestController
 @RequestMapping("/health")
 public class HealthController {

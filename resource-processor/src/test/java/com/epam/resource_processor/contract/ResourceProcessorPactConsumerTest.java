@@ -10,8 +10,10 @@ import au.com.dius.pact.core.model.annotations.Pact;
 import com.epam.resource_processor.service.CommunicationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,9 +54,17 @@ class ResourceProcessorPactConsumerTest {
     void requestResourceBinary_existingResource_returnsExactMp3Bytes(MockServer mockServer) throws IOException {
         RestTemplate restTemplate = new RestTemplate();
         RetryTemplate retryTemplate = new RetryTemplate();
-        String mockHost = mockServer.getUrl().replace("http://", "").replace("https://", "");
+        String mockHost = mockServer.getUrl()
+            .replace("http://", "")
+            .replace("https://", "");
         CommunicationService communicationService = new CommunicationService(
-                restTemplate, retryTemplate, mockHost, "dummy-song-service");
+            restTemplate, 
+            retryTemplate, 
+            Mockito.mock(RabbitTemplate.class),
+            mockHost, 
+            "dummy-song-service", 
+            "resource.processed", 
+            "resource.processed");
 
         byte[] result = communicationService.requestResourceBinary(RESOURCE_ID);
 
