@@ -18,8 +18,11 @@ public class ResourcesControllerAdvice {
 
   @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
   protected ResponseEntity<Object> handleHttpMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+    String contentType = ex.getContentType() == null
+        ? "unknown"
+        : ex.getContentType().getType() + "/" + ex.getContentType().getSubtype();
     ErrorResponse errorResponse = new ErrorResponse(
-        String.format("Invalid file format: %s. Only MP3 files are allowed", ex.getContentType()),
+        String.format("Invalid file format: %s. Only MP3 files are allowed", contentType),
         String.valueOf(HttpStatus.BAD_REQUEST.value())
     );
     return ResponseEntity.badRequest().body(errorResponse);

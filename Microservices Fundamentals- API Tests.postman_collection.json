@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "5cae2fdb-cb59-4fcc-b93c-a82511247bc6",
-    "name": "Microservices Fundamentals: Modules 2-4 API Tests",
+    "_postman_id": "172f7e2e-0501-4741-8e6d-ef4287223788",
+    "name": "Microservices Fundamentals: Module 5 API Tests",
     "description": "Generated on 2026-01-05",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "29140482"
@@ -672,84 +672,10 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test(\"Request URL matches expected structure\", function () {\r",
-                  "    var requestUrl = pm.request.url.toString();\r",
-                  "    var songServiceUrl = pm.variables.get(\"song_service_url\");\r",
-                  "    var dynamicId = pm.variables.get(\"id\");\r",
-                  "    var expectedUrl = songServiceUrl + \"/songs/\" + dynamicId;\r",
-                  "    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r",
-                  "});\r",
-                  "\r",
-                  "pm.test(\"Path variable 'id' is dynamic\", function () {\r",
-                  "    var requestUrl = pm.request.url.toString();\r",
-                  "    var dynamicId = pm.variables.get(\"id\");\r",
-                  "    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r",
-                  "    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r",
-                  "});\r",
-                  "\r",
-                  "pm.test(\"Status code is 404\", function () {\r",
-                  "    pm.expect(pm.response.code, \"Expected status code to be 404\").to.equal(404);\r",
-                  "});\r",
-                  "\r",
-                  "pm.test(\"Response is in JSON format\", function () {\r",
-                  "    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r",
-                  "      .to.equal(\"application/json\");\r",
-                  "});\r",
-                  "\r",
-                  "pm.test(\"Response contains '404'\", function () {\r",
-                  "    var responseBody = pm.response.text();\r",
-                  "    pm.expect(responseBody, \"Expected response to contain '404'\").to.include(\"404\");\r",
-                  "});\r",
-                  "\r",
-                  "let pathVariable = pm.request.url.toString().split('/').pop();\r",
-                  "\r",
-                  "pm.test(\"Response contains '${pathVariable}'\", function () {\r",
-                  "    var responseBody = pm.response.text();\r",
-                  "    pm.expect(responseBody, \"Expected response to contain '${pathVariable}'\").to.include(pathVariable);\r",
-                  "});\r",
-                  "\r",
-                  "pm.test(\"Response contains 'errorMessage'\", function () {\r",
-                  "    var responseBody = pm.response.text();\r",
-                  "    pm.expect(responseBody, \"Expected response to contain 'errorMessage'\").to.include(\"errorMessage\");\r",
-                  "});\r",
-                  "\r",
-                  "pm.test(\"Response contains 'errorCode'\", function () {\r",
-                  "    var responseBody = pm.response.text();\r",
-                  "    pm.expect(responseBody, \"Expected response to contain 'errorCode'\").to.include(\"errorCode\");\r",
-                  "});\r",
-                  "\r",
-                  "// Validate error response structure matches specification\r",
-                  "pm.test(\"Response has required error fields as per specification\", function () {\r",
-                  "    var jsonData = pm.response.json();\r",
-                  "    pm.expect(jsonData, \"Response should have 'errorMessage' field\").to.have.property(\"errorMessage\");\r",
-                  "    pm.expect(jsonData, \"Response should have 'errorCode' field\").to.have.property(\"errorCode\");\r",
-                  "    pm.expect(jsonData.errorCode, \"errorCode should be '404'\").to.equal(\"404\");\r",
-                  "});\r",
-                  "\r",
-                  "// Validate error message format matches specification exactly\r",
-                  "pm.test(\"Error message matches specification format: 'Song metadata for ID=X not found'\", function () {\r",
-                  "    var jsonData = pm.response.json();\r",
-                  "    var dynamicId = pm.variables.get(\"id\");\r",
-                  "    var expectedMessage = `Song metadata for ID=${dynamicId} not found`;\r",
-                  "    pm.expect(jsonData.errorMessage, \"Error message should match specification format\").to.equal(expectedMessage);\r",
-                  "});\r",
-                  "\r",
-                  "// Validate response does not contain 'details' field\r",
-                  "pm.test(\"Response does not contain 'details' field as per specification\", function () {\r",
-                  "    var jsonData = pm.response.json();\r",
-                  "    pm.expect(jsonData, \"404 errors should not have 'details' field\").to.not.have.property(\"details\");\r",
-                  "});\r",
-                  "\r",
-                  "// Validate response contains only required fields\r",
-                  "pm.test(\"Response contains only 'errorMessage' and 'errorCode' fields\", function () {\r",
-                  "    var jsonData = pm.response.json();\r",
-                  "    var keys = Object.keys(jsonData).sort();\r",
-                  "    pm.expect(keys, \"Response should contain only errorMessage and errorCode\").to.deep.equal([\"errorCode\", \"errorMessage\"]);\r",
-                  "});"
-                ],
                 "type": "text/javascript",
-                "packages": {}
+                "exec": [
+                  "pm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var songServiceUrl = pm.variables.get(\"song_service_url\");\r\n    var dynamicId = pm.variables.get(\"id\");\r\n    var expectedUrl = songServiceUrl + \"/songs/\" + dynamicId;\r\n    pm.expect(requestUrl, \"Expected request URL to match the expected structure\").to.equal(expectedUrl);\r\n});\r\n\r\npm.test(\"Path variable 'id' is dynamic\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var dynamicId = pm.variables.get(\"id\");\r\n    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r\n    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r\n});\r\n\r\npm.test(\"Status code is 404\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 404\").to.equal(404);\r\n});\r\n\r\npm.test(\"Response is in JSON format\", function () {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r\n      .to.equal(\"application/json\");\r\n});\r\n\r\npm.test(\"Response contains '404'\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain '404'\").to.include(\"404\");\r\n});\r\n\r\nlet pathVariable = pm.request.url.toString().split('/').pop();\r\n\r\npm.test(\"Response contains '${pathVariable}'\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain '${pathVariable}'\").to.include(pathVariable);\r\n});\r\n\r\npm.test(\"Response contains 'errorMessage'\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain 'errorMessage'\").to.include(\"errorMessage\");\r\n});\r\n\r\npm.test(\"Response contains 'errorCode'\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Expected response to contain 'errorCode'\").to.include(\"errorCode\");\r\n});\r\n\r\n// Validate error response structure matches specification\r\npm.test(\"Response has required error fields as per specification\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Response should have 'errorMessage' field\").to.have.property(\"errorMessage\");\r\n    pm.expect(jsonData, \"Response should have 'errorCode' field\").to.have.property(\"errorCode\");\r\n    pm.expect(jsonData.errorCode, \"errorCode should be '404'\").to.equal(\"404\");\r\n});\r\n\r\n// Validate error message format matches specification exactly\r\npm.test(\"Error message matches specification format: 'Song metadata for ID=X not found'\", function () {\r\n    var jsonData = pm.response.json();\r\n    var dynamicId = pm.variables.get(\"id\");\r\n    var expectedMessage = `Song metadata for ID=${dynamicId} not found`;\r\n    pm.expect(jsonData.errorMessage, \"Error message should match specification format\").to.equal(expectedMessage);\r\n});\r\n\r\n// Validate response does not contain 'details' field\r\npm.test(\"Response does not contain 'details' field as per specification\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"404 errors should not have 'details' field\").to.not.have.property(\"details\");\r\n});\r\n\r\n// Validate response contains only required fields\r\npm.test(\"Response contains only 'errorMessage' and 'errorCode' fields\", function () {\r\n    var jsonData = pm.response.json();\r\n    var keys = Object.keys(jsonData).sort();\r\n    pm.expect(keys, \"Response should contain only errorMessage and errorCode\").to.deep.equal([\"errorCode\", \"errorMessage\"]);\r\n});"
+                ]
               }
             }
           ],
@@ -3330,6 +3256,122 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "API Gateway errors",
+          "item": [
+            {
+              "name": "Unknown Endpoint",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Unknown endpoint returns 404\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "});",
+                      "pm.test(\"Error response is JSON with the gateway error schema\", function () {",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                      "    var body = pm.response.json();",
+                      "    pm.expect(Object.keys(body).sort()).to.deep.equal([\"error\", \"message\", \"path\", \"status\", \"timestamp\"]);",
+                      "    pm.expect(body.status).to.equal(404);",
+                      "    pm.expect(body.error).to.equal(\"Not Found\");",
+                      "    pm.expect(body.message).to.equal(\"The requested endpoint was not found.\");",
+                      "    pm.expect(body.path).to.equal(\"/unknown/endpoint\");",
+                      "    pm.expect(new Date(body.timestamp).toString()).to.not.equal(\"Invalid Date\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{api_gateway_url}}/unknown/endpoint",
+                  "host": [
+                    "{{api_gateway_url}}"
+                  ],
+                  "path": [
+                    "unknown",
+                    "endpoint"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Service Unavailable (TURN OFF SONG SERVICE)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Unavailable service returns 503\", function () {",
+                      "    pm.response.to.have.status(503);",
+                      "});",
+                      "pm.test(\"Service unavailable response is user-friendly JSON\", function () {",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                      "    var body = pm.response.json();",
+                      "    pm.expect(Object.keys(body).sort()).to.deep.equal([\"error\", \"message\", \"path\", \"status\", \"timestamp\"]);",
+                      "    pm.expect(body.status).to.equal(503);",
+                      "    pm.expect(body.error).to.equal(\"Service Unavailable\");",
+                      "    pm.expect(body.message).to.equal(\"The requested service is temporarily unavailable. Please try again later.\");",
+                      "    pm.expect(body.path).to.equal(\"/songs/\" + pm.variables.get(\"id\"));",
+                      "    pm.expect(new Date(body.timestamp).toString()).to.not.equal(\"Invalid Date\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{api_gateway_url}}/songs/{{id}}",
+                  "host": [
+                    "{{api_gateway_url}}"
+                  ],
+                  "path": [
+                    "songs",
+                    "{{id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Song Details (Service Running)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Request URL matches expected structure\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var expectedBaseUrl = pm.variables.get(\"song_service_url\") + \"/songs/\";\r\n    pm.expect(requestUrl.startsWith(expectedBaseUrl), \"Expected URL to start with the base song service URL\").to.be.true;\r\n});\r\n\r\npm.test(\"Path variable 'id' is dynamic\", function () {\r\n    var requestUrl = pm.request.url.toString();\r\n    var dynamicId = pm.variables.get(\"id\");\r\n    var expectedUrl = pm.variables.get(\"song_service_url\") + \"/songs/\" + dynamicId;\r\n    pm.expect(requestUrl, \"Expected request URL to include dynamic 'id'\").to.equal(expectedUrl);\r\n});\r\n\r\npm.test(\"Status code is 200\", function () {\r\n    pm.expect(pm.response.code, \"Expected status code to be 200\").to.equal(200);\r\n});\r\n\r\npm.test(\"Response is in JSON format\", function () {\r\n    pm.expect(pm.response.headers.get(\"Content-Type\"), \"Expected Content-Type to be 'application/json'\")\r\n      .to.equal(\"application/json\");\r\n});\r\n\r\npm.test(\"Response contains 'id' field and it is not null\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'id' field\").to.have.property(\"id\").and.to.not.be.null;\r\n});\r\n\r\npm.test(\"Response contains 'name' field and it is not null\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'name' field\").to.have.property(\"name\").and.to.not.be.null;\r\n});\r\n\r\npm.test(\"Response contains 'artist' field and it is not null\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'artist' field\").to.have.property(\"artist\").and.to.not.be.null;\r\n});\r\n\r\npm.test(\"Response contains 'album' field and it is not null\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'album' field\").to.have.property(\"album\").and.to.not.be.null;\r\n});\r\n\r\npm.test(\"Response contains 'duration' field and it is not null\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'duration' field\").to.have.property(\"duration\").and.to.not.be.null;\r\n});\r\n\r\npm.test(\"Duration is in mm:ss format with leading zeros\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'duration' field\").to.have.property(\"duration\").and.to.not.be.null;\r\n    \r\n    var durationPattern = /^\\d{2}:\\d{2}$/; // mm:ss format\r\n    pm.expect(jsonData.duration, `Expected duration '${jsonData.duration}' to match mm:ss format`).to.match(durationPattern);\r\n});\r\n\r\npm.test(\"Response contains 'year' field and it is not null\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData, \"Expected response to contain 'year' field\").to.have.property(\"year\").and.to.not.be.null;\r\n});\r\n\r\npm.test(\"Response does not contain 'resourceId'\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Response should not contain 'resourceId' field. Use 'id' field instead\").to.not.match(/\\bresourceId\\b/);\r\n});\r\n\r\npm.test(\"Response does not contain 'length'\", function () {\r\n    var responseBody = pm.response.text();\r\n    pm.expect(responseBody, \"Response should not contain 'length' field. Use 'duration' field instead\").to.not.match(/\\blength\\b/);\r\n});\r\n\r\n// Validate response structure matches specification exactly\r\npm.test(\"Response contains exactly 6 fields as per specification\", function () {\r\n    var jsonData = pm.response.json();\r\n    var expectedFields = [\"id\", \"name\", \"artist\", \"album\", \"duration\", \"year\"];\r\n    var actualFields = Object.keys(jsonData).sort();\r\n    pm.expect(actualFields, \"Response should contain exactly: id, name, artist, album, duration, year\").to.deep.equal(expectedFields.sort());\r\n});\r\n\r\n// Validate field types match specification\r\npm.test(\"All fields have correct types as per specification\", function () {\r\n    var jsonData = pm.response.json();\r\n    pm.expect(jsonData.id, \"id should be a number\").to.be.a(\"number\");\r\n    pm.expect(jsonData.name, \"name should be a string\").to.be.a(\"string\");\r\n    pm.expect(jsonData.artist, \"artist should be a string\").to.be.a(\"string\");\r\n    pm.expect(jsonData.album, \"album should be a string\").to.be.a(\"string\");\r\n    pm.expect(jsonData.duration, \"duration should be a string\").to.be.a(\"string\");\r\n    pm.expect(jsonData.year, \"year should be a string\").to.be.a(\"string\");\r\n});\r\n\r\n// Validate year format matches specification pattern\r\npm.test(\"Year is in 4-digit format as per specification\", function () {\r\n    var jsonData = pm.response.json();\r\n    var yearPattern = /^\\d{4}$/;\r\n    pm.expect(jsonData.year, `Expected year '${jsonData.year}' to be 4 digits`).to.match(yearPattern);\r\n});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{song_service_url}}/songs/{{id}}",
+                  "host": [
+                    "{{song_service_url}}"
+                  ],
+                  "path": [
+                    "songs",
+                    "{{id}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }
@@ -3362,12 +3404,16 @@
       "value": "1"
     },
     {
+      "key": "api_gateway_url",
+      "value": "http://localhost:8110"
+    },
+    {
       "key": "resource_service_url",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:8110"
     },
     {
       "key": "song_service_url",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:8110"
     },
     {
       "key": "song_metadata_id",
