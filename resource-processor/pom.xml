@@ -84,6 +84,13 @@
 			<version>${apache.tika.version}</version>
 		</dependency>
 
+		<!-- To publish structured logs directly to Elasticsearch's REST API -->
+		<dependency>
+			<groupId>com.internetitem</groupId>
+			<artifactId>logback-elasticsearch-appender</artifactId>
+			<version>1.6</version>
+		</dependency>
+
 		<!-- ===== TEST DEPENDENCIES ===== -->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>

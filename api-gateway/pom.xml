@@ -54,6 +54,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- To publish structured logs directly to Elasticsearch's REST API -->
+		<dependency>
+			<groupId>com.internetitem</groupId>
+			<artifactId>logback-elasticsearch-appender</artifactId>
+			<version>1.6</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

@@ -85,6 +85,10 @@ services:
       EUREKA_CLIENT_FETCH_REGISTRY: ${EUREKA_CLIENT_FETCH_REGISTRY}
       EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS: ${EUREKA_LEASE_RENEWAL_INTERVAL_IN_SECONDS}
       EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
+      
+      # Monitoring
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
+      ELASTICSEARCH_PORT: ${ELASTICSEARCH_PORT}
     depends_on:
       storage-db:
         condition: service_healthy
@@ -173,6 +177,10 @@ services:
       EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS: ${EUREKA_REGISTRY_FETCH_INTERVAL_IN_SECONDS}
       RESOURCE_SERVICE_REF_NAME: ${RESOURCE_SERVICE_REF_NAME}
       SONG_SERVICE_REF_NAME: ${SONG_SERVICE_REF_NAME}
+      
+      # Monitoring
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
+      ELASTICSEARCH_PORT: ${ELASTICSEARCH_PORT}
     healthcheck:
       # Spring Boot Actuator health endpoint returns 200 OK when the gateway is UP
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${API_GATEWAY_SERVER_PORT}/actuator/health"]
@@ -240,6 +248,10 @@ services:
       RESOURCE_PROCESSED_EXCHANGE: ${RESOURCE_PROCESSED_EXCHANGE:-resource.processed}
       RESOURCE_PROCESSED_QUEUE: ${RESOURCE_PROCESSED_QUEUE:-resource.processed}
       RESOURCE_PROCESSED_ROUTING_KEY: ${RESOURCE_PROCESSED_ROUTING_KEY:-resource.processed}
+      
+      # Monitoring
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
+      ELASTICSEARCH_PORT: ${ELASTICSEARCH_PORT}
     healthcheck:
       # send a GET request to see if it returns a 200 OK status
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/health"]
@@ -281,6 +293,10 @@ services:
       RESOURCE_PROCESSOR_QUEUE: ${RESOURCE_RABBITMQ_EXCHANGE:-resource.uploaded}.${RESOURCE_PROCESSOR_STREAM_GROUP:-resource-processor}
       RESOURCE_PROCESSED_EXCHANGE: ${RESOURCE_PROCESSED_EXCHANGE:-resource.processed}
       RESOURCE_PROCESSED_ROUTING_KEY: ${RESOURCE_PROCESSED_ROUTING_KEY:-resource.processed}
+      
+      # Monitoring
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
+      ELASTICSEARCH_PORT: ${ELASTICSEARCH_PORT}
     healthcheck:
       # send a GET request to the RabbitMQ management API to check if the queue has at least one consumer
       test: >-
@@ -336,6 +352,10 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-none}
       SPRING_DOCKER_COMPOSE_ENABLED: ${SPRING_DOCKER_COMPOSE_ENABLED:-false}
       SERVER_PORT: ${SONG_SERVICE_SERVER_PORT}
+      
+      # Monitoring
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
+      ELASTICSEARCH_PORT: ${ELASTICSEARCH_PORT}
     healthcheck:
       # send a GET request to see if it returns a 200 OK status
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${SERVER_PORT}/health"]

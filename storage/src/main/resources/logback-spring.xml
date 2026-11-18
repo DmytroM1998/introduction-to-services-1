@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="storage-logback"/>
+    <property name="ES_HOST" value="${ELASTICSEARCH_HOST:-localhost}"/>
+    <property name="ES_PORT" value="${ELASTICSEARCH_PORT:-9200}"/>
+
+    <!-- Console Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Direct Elasticsearch HTTP Appender -->
+    <appender name="ELASTICSEARCH" class="com.internetitem.logback.elasticsearch.ElasticsearchAppender">
+        <url>http://${ES_HOST}:${ES_PORT}/_bulk</url>
+        <index>logs-microservices-%date{yyyy.MM.dd}</index>
+        <connectTimeout>3000</connectTimeout>
+        <readTimeout>5000</readTimeout>
+        <properties>
+            <property name="service" value="${appName}"/>
+            <property name="severity" value="%level"/>
+            <property name="thread" value="%thread"/>
+            <property name="logger" value="%logger"/>
+        </properties>
+        <headers>
+            <header>
+                <name>Content-Type</name>
+                <value>application/json</value>
+            </header>
+        </headers>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ELASTICSEARCH"/>
+    </root>
+</configuration>
