@@ -1,5 +1,5 @@
 # For traditional app usage, deploy the databases and resource object storage
-# docker compose up -d resource-db song-db storage-db rabbitmq localstack
+# docker compose up -d resource-db song-db storage-db rabbitmq localstack elasticsearch
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build --wait [--scale song-service=2] OR
@@ -349,7 +349,24 @@ services:
       eureka-server:
         condition: service_healthy
 
-# the default network must be used by Module 2 rules
-#networks:
-#  microservices-net:
-#    external: true
+  elasticsearch:
+    image: elasticsearch:9.5.5
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node # single node of Elasticsearch
+      - xpack.security.enabled=false # no need for built-in auth, RBAC and TLS for now
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "${ELASTICSEARCH_PORT}:${ELASTICSEARCH_PORT}"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:${ELASTICSEARCH_PORT}/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 25s
+  
+volumes:
+  elasticsearch-data:
+    # persist data and load it when 'elasticsearch' container is re-created 
