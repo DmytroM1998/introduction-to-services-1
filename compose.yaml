@@ -387,6 +387,20 @@ services:
       retries: 15
       start_period: 25s
   
+  grafana:
+    image: grafana/grafana:13.2
+    container_name: grafana
+    ports:
+      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+  
 volumes:
   elasticsearch-data:
     # persist data and load it when 'elasticsearch' container is re-created 
