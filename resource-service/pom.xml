@@ -107,12 +107,23 @@
 			<artifactId>resilience4j-circuitbreaker</artifactId>
 			<version>${resilience4j.version}</version>
 		</dependency>
-		
+
+		<!-- Monitoring -->
 		<!-- To publish structured logs directly to Elasticsearch's REST API -->
 		<dependency>
 			<groupId>com.internetitem</groupId>
 			<artifactId>logback-elasticsearch-appender</artifactId>
 			<version>1.6</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- To collect metrics across all connected services and push them directly to Elasticsearch -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-elastic</artifactId>
 		</dependency>
 
 		<!-- ===== TEST DEPENDENCIES ===== -->
