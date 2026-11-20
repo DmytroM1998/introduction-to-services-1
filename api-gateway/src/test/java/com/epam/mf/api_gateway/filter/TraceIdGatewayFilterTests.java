@@ -34,12 +34,14 @@ class TraceIdGatewayFilterTests {
     FilterChain chain = (wrappedRequest, wrappedResponse) -> {
       assertEquals(traceId, ((HttpServletRequest) wrappedRequest).getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
       assertEquals(traceId, TraceContext.getTraceId());
+      assertEquals("api-gateway", MDC.get(TraceContext.MDC_SERVICE_KEY));
     };
 
     filter.doFilter(request, response, chain);
 
     assertEquals(traceId, response.getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
     assertNull(TraceContext.getTraceId());
+    assertNull(MDC.get(TraceContext.MDC_SERVICE_KEY));
   }
 
   @Test
@@ -51,6 +53,7 @@ class TraceIdGatewayFilterTests {
       assertNotNull(traceId);
       UUID.fromString(traceId);
       assertEquals(traceId, MDC.get(TraceContext.MDC_TRACE_ID_KEY));
+      assertEquals("api-gateway", MDC.get(TraceContext.MDC_SERVICE_KEY));
       throw new jakarta.servlet.ServletException("downstream failure");
     };
 
@@ -60,5 +63,6 @@ class TraceIdGatewayFilterTests {
     assertNotNull(responseTraceId);
     UUID.fromString(responseTraceId);
     assertNull(TraceContext.getTraceId());
+    assertNull(MDC.get(TraceContext.MDC_SERVICE_KEY));
   }
 }

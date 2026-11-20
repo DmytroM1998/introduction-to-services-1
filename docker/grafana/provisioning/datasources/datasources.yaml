@@ -9,7 +9,6 @@ datasources:
       index: "microservices-logs-*"
       timeField: "@timestamp"
       logMessageField: "message"
-      logLevelField: "severity"
     isDefault: true
     editable: true
 

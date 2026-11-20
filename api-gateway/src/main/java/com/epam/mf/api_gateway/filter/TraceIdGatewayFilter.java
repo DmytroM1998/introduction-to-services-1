@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -16,15 +17,17 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Component
 public class TraceIdGatewayFilter extends HttpFilter {
-
+  
   @Override
   protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws IOException, ServletException {
     String traceId = TraceContext.initTraceId(request.getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
     HttpServletRequest tracedRequest = new TraceIdRequestWrapper(request, traceId);
     try {
+      log.info("Handling HTTP {} {}", request.getMethod(), request.getRequestURI());
       chain.doFilter(tracedRequest, response);
     } finally {
       response.setHeader(TraceContext.HTTP_HEADER_TRACE_ID, traceId);

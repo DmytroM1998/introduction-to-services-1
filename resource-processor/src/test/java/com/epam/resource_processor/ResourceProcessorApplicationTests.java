@@ -3,6 +3,7 @@ package com.epam.resource_processor;
 import com.epam.resource_processor.dto.SongDto;
 import com.epam.resource_processor.service.CommunicationService;
 import com.epam.resource_processor.tracing.TraceContext;
+import org.slf4j.MDC;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,7 @@ class ResourceProcessorApplicationTests {
 		}
 		when(communicationService.requestResourceBinary(resourceIdToSave)).thenAnswer(invocation -> {
 			assertThat(TraceContext.getTraceId()).isEqualTo(traceId);
+			assertThat(MDC.get(TraceContext.MDC_SERVICE_KEY)).isEqualTo("resource-processor");
 			return resourceBytes;
 		});
 
@@ -70,6 +72,7 @@ class ResourceProcessorApplicationTests {
 						SongDto::getAlbum, SongDto::getDuration, SongDto::getYear)
 				.containsExactly(resourceIdToSave, "Test Title", "Test Artist", "Test Album", "00:07", "2025");
 		assertThat(TraceContext.getTraceId()).isNull();
+		assertThat(MDC.get(TraceContext.MDC_SERVICE_KEY)).isNull();
 	}
 
 }
