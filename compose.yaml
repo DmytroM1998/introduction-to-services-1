@@ -1,5 +1,5 @@
 # For traditional app usage, deploy the databases and resource object storage
-# docker compose up -d resource-db song-db storage-db rabbitmq localstack elasticsearch
+# docker compose up -d resource-db song-db storage-db rabbitmq localstack elasticsearch grafana
 
 # For full deployment to Docker, use the following command:
 # docker compose up -d --build --wait [--scale song-service=2] OR
@@ -397,6 +397,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     volumes:
       - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
     depends_on:
       elasticsearch:
         condition: service_healthy

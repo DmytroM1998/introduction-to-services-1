@@ -5,11 +5,11 @@ datasources:
     type: elasticsearch
     access: proxy
     url: http://elasticsearch:9200
-    database: "logs-microservices-*"
     jsonData:
+      index: "logs-microservices-*"
       timeField: "@timestamp"
       logMessageField: "message"
-      logLevelField: "level"
+      logLevelField: "severity"
     isDefault: true
     editable: true
 
@@ -17,7 +17,7 @@ datasources:
     type: elasticsearch
     access: proxy
     url: http://elasticsearch:9200
-    database: "metrics-microservices-*"
     jsonData:
+      index: "metrics-microservices-*"
       timeField: "@timestamp"
     editable: true
