@@ -1,19 +1,25 @@
 package com.epam.resource_processor.service;
 
 import com.epam.resource_processor.dto.SongDto;
+import com.epam.resource_processor.tracing.TraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -40,12 +46,27 @@ public class CommunicationService {
       @Value("${resource.processed.exchange:resource.processed}") String resourceProcessedExchange,
       @Value("${resource.processed.routing-key:resource.processed}") String resourceProcessedRoutingKey) {
     this.restTemplate = restTemplate;
+    setupClientInterceptors();
     this.retryTemplate = retryTemplate;
     this.rabbitTemplate = rabbitTemplate;
     this.resourceServiceName = resourceServiceName;
     this.songServiceName = songServiceName;
     this.resourceProcessedExchange = resourceProcessedExchange;
     this.resourceProcessedRoutingKey = resourceProcessedRoutingKey;
+  }
+
+  private void setupClientInterceptors() {
+    ClientHttpRequestInterceptor interceptor = (HttpRequest request, byte[] body,
+        ClientHttpRequestExecution execution) -> {
+      String traceId = TraceContext.getTraceId();
+      if (traceId != null && !traceId.isBlank()) {
+        request.getHeaders().set(TraceContext.HTTP_HEADER_TRACE_ID, traceId);
+      }
+      return execution.execute(request, body);
+    };
+    List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>(restTemplate.getInterceptors());
+    interceptors.add(interceptor);
+    restTemplate.setInterceptors(interceptors);
   }
 
   public void saveSongMetadata(Long resourceId, SongDto songMetadata) {
@@ -81,6 +102,7 @@ public class CommunicationService {
   public void notifyResourceProcessed(Long resourceId) {
     Message message = MessageBuilder.withBody(Long.toString(resourceId).getBytes(StandardCharsets.UTF_8))
         .setContentType("text/plain")
+        .setHeader(TraceContext.AMQP_HEADER_TRACE_ID, TraceContext.getTraceId())
         .build();
     retryTemplate.execute(context -> {
       rabbitTemplate.send(resourceProcessedExchange, resourceProcessedRoutingKey, message);

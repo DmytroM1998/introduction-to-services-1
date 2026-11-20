@@ -2,6 +2,7 @@ package com.epam.resource_processor;
 
 import com.epam.resource_processor.dto.SongDto;
 import com.epam.resource_processor.service.CommunicationService;
+import com.epam.resource_processor.tracing.TraceContext;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,13 +43,20 @@ class ResourceProcessorApplicationTests {
 	@Test
 	void uploadedJsonResourceId_fetchesParsesAndSubmitsMetadata() throws IOException {
 		long resourceIdToSave = 42L;
+		String traceId = "trace-from-resource-service";
+		byte[] resourceBytes;
 		try (InputStream sample = getClass().getResourceAsStream("/valid-sample.mp3")) {
 			assertThat(sample).isNotNull();
-			when(communicationService.requestResourceBinary(resourceIdToSave)).thenReturn(sample.readAllBytes());
+			resourceBytes = sample.readAllBytes();
 		}
+		when(communicationService.requestResourceBinary(resourceIdToSave)).thenAnswer(invocation -> {
+			assertThat(TraceContext.getTraceId()).isEqualTo(traceId);
+			return resourceBytes;
+		});
 
 		input.send(MessageBuilder.withPayload("42".getBytes(StandardCharsets.UTF_8))
 				.setHeader("contentType", "application/json")
+				.setHeader(TraceContext.AMQP_HEADER_TRACE_ID, traceId)
 				.build(), "resource.uploaded");
 
 		ArgumentCaptor<SongDto> song = ArgumentCaptor.forClass(SongDto.class);
@@ -61,6 +69,7 @@ class ResourceProcessorApplicationTests {
 				.extracting(SongDto::getId, SongDto::getName, SongDto::getArtist,
 						SongDto::getAlbum, SongDto::getDuration, SongDto::getYear)
 				.containsExactly(resourceIdToSave, "Test Title", "Test Artist", "Test Album", "00:07", "2025");
+		assertThat(TraceContext.getTraceId()).isNull();
 	}
 
 }

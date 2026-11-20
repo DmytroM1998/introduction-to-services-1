@@ -1,5 +1,6 @@
 package com.epam.resource.service;
 
+import com.epam.resource.tracing.TraceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
@@ -19,9 +20,15 @@ public class ResourceProcessedListener {
   public void onResourceProcessed(Message message) {
     String body = new String(message.getBody(), StandardCharsets.UTF_8);
     long resourceId = validateResourceId(body);
-
-    log.info("Received processing completion for resource {}", resourceId);
-    resourcesService.promoteResourceToPermanent(resourceId);
+    
+    String xTraceId = message.getMessageProperties().getHeader(TraceContext.AMQP_HEADER_TRACE_ID);
+    try {
+      TraceContext.initTraceId(xTraceId);
+      log.info("Received processing completion for resource {}", resourceId);
+      resourcesService.promoteResourceToPermanent(resourceId);
+    } finally {
+      TraceContext.clear();
+    }
   }
 
   private static long validateResourceId(String body) {

@@ -22,6 +22,7 @@
             <property name="severity" value="%level"/>
             <property name="thread" value="%thread"/>
             <property name="logger" value="%logger"/>
+            <property name="traceId" value="%X{traceId:-NONE}"/>
         </properties>
         <headers>
             <header>
