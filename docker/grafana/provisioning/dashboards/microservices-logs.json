@@ -41,7 +41,7 @@
                           }
                         ],
                         "preserveQuery": true,
-                        "query": "service:\"api-gateway\"",
+                        "query": "service:\"api-gateway\" AND ${logFilter:raw}",
                         "queryType": "lucene",
                         "timeField": "@timestamp"
                       },
@@ -103,7 +103,7 @@
                           }
                         ],
                         "preserveQuery": true,
-                        "query": "service:\"resource-service\"",
+                        "query": "service:\"resource-service\" AND ${logFilter:raw}",
                         "queryType": "lucene",
                         "timeField": "@timestamp"
                       },
@@ -165,7 +165,7 @@
                           }
                         ],
                         "preserveQuery": true,
-                        "query": "service:\"resource-processor\"",
+                        "query": "service:\"resource-processor\" AND ${logFilter:raw}",
                         "queryType": "lucene",
                         "timeField": "@timestamp"
                       },
@@ -227,7 +227,7 @@
                           }
                         ],
                         "preserveQuery": true,
-                        "query": "service:\"song-service\"",
+                        "query": "service:\"song-service\" AND ${logFilter:raw}",
                         "queryType": "lucene",
                         "timeField": "@timestamp"
                       },
@@ -289,7 +289,7 @@
                           }
                         ],
                         "preserveQuery": true,
-                        "query": "service:\"storage\"",
+                        "query": "service:\"storage\" AND ${logFilter:raw}",
                         "queryType": "lucene",
                         "timeField": "@timestamp"
                       },
@@ -485,6 +485,22 @@
       "to": "now"
     },
     "title": "Microservices Logs",
-    "variables": []
+    "variables": [
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "logFilter",
+          "label": "Lucene filter",
+          "description": "Filter logs in every service tab. For trace search, enter traceId:\"your-trace-id\". Use *:* to show all logs.",
+          "current": {
+            "text": "*:*",
+            "value": "*:*"
+          },
+          "query": "*:*",
+          "hide": "dontHide",
+          "skipUrlSync": false
+        }
+      }
+    ]
   }
 }
