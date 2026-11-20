@@ -713,6 +713,7 @@
                         "metrics": [
                           {
                             "field": "value",
+                            "hide": true,
                             "id": "1",
                             "type": "sum"
                           }
