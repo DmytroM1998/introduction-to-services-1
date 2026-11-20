@@ -32,6 +32,7 @@ public class CommunicationService {
   private final RestTemplate restTemplate;
   private final RetryTemplate retryTemplate;
   private final RabbitTemplate rabbitTemplate;
+  private final TraceContext traceContext;
   private final String resourceServiceName;
   private final String songServiceName;
   private final String resourceProcessedExchange;
@@ -41,11 +42,13 @@ public class CommunicationService {
       RestTemplate restTemplate,
       RetryTemplate retryTemplate,
       RabbitTemplate rabbitTemplate,
+      TraceContext traceContext,
       @Value("${resource.service.ref.name:resource-service}") String resourceServiceName,
       @Value("${song.service.ref.name:song-service}") String songServiceName,
       @Value("${resource.processed.exchange:resource.processed}") String resourceProcessedExchange,
       @Value("${resource.processed.routing-key:resource.processed}") String resourceProcessedRoutingKey) {
     this.restTemplate = restTemplate;
+    this.traceContext = traceContext;
     setupClientInterceptors();
     this.retryTemplate = retryTemplate;
     this.rabbitTemplate = rabbitTemplate;
@@ -58,7 +61,7 @@ public class CommunicationService {
   private void setupClientInterceptors() {
     ClientHttpRequestInterceptor interceptor = (HttpRequest request, byte[] body,
         ClientHttpRequestExecution execution) -> {
-      String traceId = TraceContext.getTraceId();
+      String traceId = traceContext.getTraceId();
       if (traceId != null && !traceId.isBlank()) {
         request.getHeaders().set(TraceContext.HTTP_HEADER_TRACE_ID, traceId);
       }
@@ -102,7 +105,7 @@ public class CommunicationService {
   public void notifyResourceProcessed(Long resourceId) {
     Message message = MessageBuilder.withBody(Long.toString(resourceId).getBytes(StandardCharsets.UTF_8))
         .setContentType("text/plain")
-        .setHeader(TraceContext.AMQP_HEADER_TRACE_ID, TraceContext.getTraceId())
+        .setHeader(TraceContext.AMQP_HEADER_TRACE_ID, traceContext.getTraceId())
         .build();
     retryTemplate.execute(context -> {
       rabbitTemplate.send(resourceProcessedExchange, resourceProcessedRoutingKey, message);

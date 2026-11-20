@@ -17,12 +17,13 @@ public class ResourceMessageListener implements Consumer<Message<?>> {
   
   private final ResourceMetadataService resourceMetadataService;
   private final CommunicationService communicationService;
+  private final TraceContext traceContext;
 
   @Override
   public void accept(Message<?> message) {
     String incomingTraceId = message.getHeaders().get(
         TraceContext.AMQP_HEADER_TRACE_ID, String.class);
-    TraceContext.initTraceId(incomingTraceId);
+    traceContext.initTraceId(incomingTraceId);
     try {
       Long resourceId = parseResourceId(message.getPayload());
       log.info("Received resource ID {} for processing", resourceId);
@@ -34,7 +35,7 @@ public class ResourceMessageListener implements Consumer<Message<?>> {
 
       log.info("Completed processing for resource ID {}", resourceId);
     } finally {
-      TraceContext.clear();
+      traceContext.clear();
     }
   }
 

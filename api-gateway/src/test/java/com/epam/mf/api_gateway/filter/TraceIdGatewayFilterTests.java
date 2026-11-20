@@ -18,11 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TraceIdGatewayFilterTests {
 
-  private final TraceIdGatewayFilter filter = new TraceIdGatewayFilter();
+  private final TraceContext traceContext = new TraceContext("api-gateway");
+  private final TraceIdGatewayFilter filter = new TraceIdGatewayFilter(traceContext);
 
   @AfterEach
   void clearTraceContext() {
-    TraceContext.clear();
+    traceContext.clear();
   }
 
   @Test
@@ -33,14 +34,14 @@ class TraceIdGatewayFilterTests {
     MockHttpServletResponse response = new MockHttpServletResponse();
     FilterChain chain = (wrappedRequest, wrappedResponse) -> {
       assertEquals(traceId, ((HttpServletRequest) wrappedRequest).getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
-      assertEquals(traceId, TraceContext.getTraceId());
+      assertEquals(traceId, traceContext.getTraceId());
       assertEquals("api-gateway", MDC.get(TraceContext.MDC_SERVICE_KEY));
     };
 
     filter.doFilter(request, response, chain);
 
     assertEquals(traceId, response.getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
-    assertNull(TraceContext.getTraceId());
+    assertNull(traceContext.getTraceId());
     assertNull(MDC.get(TraceContext.MDC_SERVICE_KEY));
   }
 
@@ -62,7 +63,7 @@ class TraceIdGatewayFilterTests {
     String responseTraceId = response.getHeader(TraceContext.HTTP_HEADER_TRACE_ID);
     assertNotNull(responseTraceId);
     UUID.fromString(responseTraceId);
-    assertNull(TraceContext.getTraceId());
+    assertNull(traceContext.getTraceId());
     assertNull(MDC.get(TraceContext.MDC_SERVICE_KEY));
   }
 }

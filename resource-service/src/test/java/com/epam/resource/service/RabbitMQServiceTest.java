@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.AmqpTimeoutException;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.epam.resource.tracing.TraceContext;
 
 import java.nio.charset.StandardCharsets;
 
@@ -23,10 +24,11 @@ class RabbitMQServiceTest {
 
     @Mock
     RabbitTemplate rabbit;
+    private final TraceContext traceContext = new TraceContext("resource-service");
 
     @Test
     void sendResourceId_customExchange_sendsUtf8JsonWithConsumerRoutingKey() {
-        RabbitMQService service = new RabbitMQService(rabbit, "custom.resource.exchange");
+        RabbitMQService service = new RabbitMQService(rabbit, traceContext, "custom.resource.exchange");
 
         service.sendResourceId(42L);
 
@@ -38,7 +40,7 @@ class RabbitMQServiceTest {
 
     @Test
     void sendResourceId_brokerFailure_propagatesFailure() {
-        RabbitMQService service = new RabbitMQService(rabbit, "resource.uploaded");
+        RabbitMQService service = new RabbitMQService(rabbit, traceContext, "resource.uploaded");
         var failure = new AmqpTimeoutException("publish failed");
         doThrow(failure).when(rabbit).send(eq("resource.uploaded"), eq("resource.uploaded"), any(Message.class));
 

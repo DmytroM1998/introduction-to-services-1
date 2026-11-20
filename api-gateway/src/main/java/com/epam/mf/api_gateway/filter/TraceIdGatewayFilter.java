@@ -20,18 +20,24 @@ import java.util.Set;
 @Slf4j
 @Component
 public class TraceIdGatewayFilter extends HttpFilter {
+
+  private final TraceContext traceContext;
+
+  public TraceIdGatewayFilter(TraceContext traceContext) {
+    this.traceContext = traceContext;
+  }
   
   @Override
   protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
       throws IOException, ServletException {
-    String traceId = TraceContext.initTraceId(request.getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
+    String traceId = traceContext.initTraceId(request.getHeader(TraceContext.HTTP_HEADER_TRACE_ID));
     HttpServletRequest tracedRequest = new TraceIdRequestWrapper(request, traceId);
     try {
       log.info("Handling HTTP {} {}", request.getMethod(), request.getRequestURI());
       chain.doFilter(tracedRequest, response);
     } finally {
       response.setHeader(TraceContext.HTTP_HEADER_TRACE_ID, traceId);
-      TraceContext.clear();
+      traceContext.clear();
     }
   }
 

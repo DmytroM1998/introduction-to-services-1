@@ -21,10 +21,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class CommunicationServiceTracePropagationTests {
 
   private static final String TRACE_ID = "trace-from-message";
+  private final TraceContext traceContext = new TraceContext("resource-processor");
 
   @AfterEach
   void clearTraceContext() {
-    TraceContext.clear();
+    traceContext.clear();
   }
 
   @Test
@@ -35,6 +36,7 @@ class CommunicationServiceTracePropagationTests {
         restTemplate,
         new RetryTemplate(),
         rabbitTemplate,
+        traceContext,
         "resource-service",
         "song-service",
         "resource.processed",
@@ -43,7 +45,7 @@ class CommunicationServiceTracePropagationTests {
     server.expect(requestTo("http://resource-service/resources/42"))
         .andExpect(header(TraceContext.HTTP_HEADER_TRACE_ID, TRACE_ID))
         .andRespond(withSuccess().contentType(MediaType.APPLICATION_OCTET_STREAM).body(new byte[] {1, 2, 3}));
-    TraceContext.initTraceId(TRACE_ID);
+    traceContext.initTraceId(TRACE_ID);
 
     byte[] response = communicationService.requestResourceBinary(42L);
 
@@ -58,11 +60,12 @@ class CommunicationServiceTracePropagationTests {
         new RestTemplate(),
         new RetryTemplate(),
         rabbitTemplate,
+        traceContext,
         "resource-service",
         "song-service",
         "resource.processed",
         "resource.processed");
-    TraceContext.initTraceId(TRACE_ID);
+    traceContext.initTraceId(TRACE_ID);
 
     communicationService.notifyResourceProcessed(42L);
 

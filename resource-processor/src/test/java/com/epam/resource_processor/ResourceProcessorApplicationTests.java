@@ -33,6 +33,9 @@ class ResourceProcessorApplicationTests {
 	@Autowired
 	InputDestination input;
 
+	@Autowired
+	TraceContext traceContext;
+
 	@MockitoBean
 	CommunicationService communicationService;
 
@@ -51,7 +54,7 @@ class ResourceProcessorApplicationTests {
 			resourceBytes = sample.readAllBytes();
 		}
 		when(communicationService.requestResourceBinary(resourceIdToSave)).thenAnswer(invocation -> {
-			assertThat(TraceContext.getTraceId()).isEqualTo(traceId);
+			assertThat(traceContext.getTraceId()).isEqualTo(traceId);
 			assertThat(MDC.get(TraceContext.MDC_SERVICE_KEY)).isEqualTo("resource-processor");
 			return resourceBytes;
 		});
@@ -71,7 +74,7 @@ class ResourceProcessorApplicationTests {
 				.extracting(SongDto::getId, SongDto::getName, SongDto::getArtist,
 						SongDto::getAlbum, SongDto::getDuration, SongDto::getYear)
 				.containsExactly(resourceIdToSave, "Test Title", "Test Artist", "Test Album", "00:07", "2025");
-		assertThat(TraceContext.getTraceId()).isNull();
+		assertThat(traceContext.getTraceId()).isNull();
 		assertThat(MDC.get(TraceContext.MDC_SERVICE_KEY)).isNull();
 	}
 

@@ -1,7 +1,6 @@
 package com.epam.resource.service;
 
 import com.epam.resource.tracing.TraceContext;
-import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -15,17 +14,20 @@ import java.util.UUID;
 public class RabbitMQService {
 
   private final RabbitTemplate rabbitTemplate;
+  private final TraceContext traceContext;
   private final String resourceExchange;
 
   public RabbitMQService(
       RabbitTemplate rabbitTemplate,
+      TraceContext traceContext,
       @Value("${resource.rabbitmq.exchange:resource.uploaded}") String resourceExchange) {
     this.rabbitTemplate = rabbitTemplate;
+    this.traceContext = traceContext;
     this.resourceExchange = resourceExchange;
   }
 
   public void sendResourceId(long resourceId) {
-    String currentTraceId = MDC.get(TraceContext.MDC_TRACE_ID_KEY);
+    String currentTraceId = traceContext.getTraceId();
     if (currentTraceId == null || currentTraceId.isBlank()) {
       currentTraceId = UUID.randomUUID().toString(); //shouldn't be necessary because TraceIdFilter does so
     }
