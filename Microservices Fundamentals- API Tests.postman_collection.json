@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "172f7e2e-0501-4741-8e6d-ef4287223788",
-    "name": "Microservices Fundamentals: Module 5 API Tests",
+    "_postman_id": "e8c239f1-e969-4a61-a271-119646fb7793",
+    "name": "Microservices Fundamentals: Module 6 API Tests",
     "description": "Generated on 2026-01-05",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "29140482"
@@ -3372,6 +3372,77 @@
               "response": []
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Storage Service",
+      "item": [
+        {
+          "name": "Get All Storages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{api_gateway_url}}/storages",
+              "host": [
+                "{{api_gateway_url}}"
+              ],
+              "path": [
+                "storages"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Storages by id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{api_gateway_url}}/storages?id=2",
+              "host": [
+                "{{api_gateway_url}}"
+              ],
+              "path": [
+                "storages"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create new storage metadata",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storageType\": \"PERMANENT\",\n  \"bucket\": \"resources-permanent\", //Don't change it to a custom name! Storage cannot create new S3 buckets\n  \"path\": \"resources/new-permanent/\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{api_gateway_url}}/storages",
+              "host": [
+                "{{api_gateway_url}}"
+              ],
+              "path": [
+                "storages"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }

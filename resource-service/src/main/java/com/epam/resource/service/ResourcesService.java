@@ -1,7 +1,9 @@
 package com.epam.resource.service;
 
 import com.epam.resource.dto.ErrorResponse;
+import com.epam.resource.dto.StorageDetails;
 import com.epam.resource.entity.ResourceEntity;
+import com.epam.resource.entity.StorageType;
 import com.epam.resource.exception.ErrorCodeException;
 import com.epam.resource.repository.ResourceRepository;
 import com.epam.resource.util.MessageConstants;
@@ -50,6 +52,7 @@ public class ResourcesService {
   private final RestTemplate restTemplate;
   private final RetryTemplate retryTemplate;
   private final S3BucketService s3BucketService;
+  private final StorageLocationService storageLocationService;
 
   private String songServiceUrlSongsController;
 
@@ -59,23 +62,56 @@ public class ResourcesService {
     log.info("Song service URL: {}", songServiceUrlSongsController);
   }
 
-  public Map<String, Long> processAndSaveResource(HttpServletRequest request) {
+  public Map<String, Long> saveResourceAsStaging(HttpServletRequest request) {
     byte[] mp3file = extractBytesFromRequest(request);
-    String objectKey = s3BucketService.generateMp3ResourceObjectKey();
-    String location = s3BucketService.getResourceStorageBucketLocation(objectKey);
+    StorageDetails stagingStorage = storageLocationService.getStorage(StorageType.STAGING);
+    String objectKey = s3BucketService.generateMp3ResourceObjectKey(stagingStorage.getPath());
+    String location = s3BucketService.getResourceStorageBucketLocation(stagingStorage, objectKey);
     ResourceEntity resourceEntity = new ResourceEntity(location);
     ResourceEntity savedEntity = null;
 
     try {
-      s3BucketService.saveFileInS3StorageBucket(objectKey, mp3file);
+      s3BucketService.saveFileInS3StorageBucket(stagingStorage.getBucket(), objectKey, mp3file);
       savedEntity = retryTemplate.execute(context -> resourceRepository.save(resourceEntity));
       sendResourceMessageToProcessor(savedEntity);
       return Map.of("id", savedEntity.getId());
     } catch (RuntimeException saveFailure) {
       tryToDeleteResourceFromDb(savedEntity, saveFailure);
-      s3BucketService.deleteObjectOnRollback(objectKey, saveFailure);
+      s3BucketService.deleteObjectOnRollback(stagingStorage.getBucket(), objectKey, saveFailure);
       throw saveFailure;
     }
+  }
+
+  public void promoteResourceToPermanent(long resourceId) {
+    ResourceEntity resource = retryTemplate.execute(context -> resourceRepository.findById(resourceId))
+        .orElseThrow(() -> new ErrorCodeException(
+            HttpStatus.NOT_FOUND.value(),
+            String.format("Resource with ID=%d not found", resourceId)));
+
+    StorageDetails permanentStorage = storageLocationService.getStorage(StorageType.PERMANENT);
+    StorageDetails stagingStorage = storageLocationService.getStorage(StorageType.STAGING);
+    if (s3BucketService.isInStorage(resource.getLocation(), permanentStorage)) {
+      return;
+    }
+
+    String previousLocation = resource.getLocation();
+    String permanentLocation = s3BucketService.copyObjectToStorage(
+        previousLocation, stagingStorage, permanentStorage);
+    resource.setLocation(permanentLocation);
+    try {
+      retryTemplate.execute(context -> resourceRepository.save(resource));
+    } catch (RuntimeException updateFailure) {
+      resource.setLocation(previousLocation);
+      try {
+        s3BucketService.deleteObject(permanentLocation);
+      } catch (RuntimeException cleanupFailure) {
+        updateFailure.addSuppressed(cleanupFailure);
+        log.error("Failed to remove copied permanent object for resource {} after database update failed",
+            resourceId, cleanupFailure);
+      }
+      throw updateFailure;
+    }
+    s3BucketService.deleteObject(previousLocation);
   }
 
   private void tryToDeleteResourceFromDb(ResourceEntity resourceToDelete, RuntimeException saveFailure) {

@@ -2,6 +2,9 @@ package com.epam.resource_processor.service;
 
 import com.epam.resource_processor.dto.SongDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageBuilder;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +12,8 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+
+import java.nio.charset.StandardCharsets;
 
 @Service
 @Slf4j
@@ -20,18 +25,27 @@ public class CommunicationService {
   
   private final RestTemplate restTemplate;
   private final RetryTemplate retryTemplate;
+  private final RabbitTemplate rabbitTemplate;
   private final String resourceServiceName;
   private final String songServiceName;
+  private final String resourceProcessedExchange;
+  private final String resourceProcessedRoutingKey;
 
   public CommunicationService(
       RestTemplate restTemplate,
       RetryTemplate retryTemplate,
+      RabbitTemplate rabbitTemplate,
       @Value("${resource.service.ref.name:resource-service}") String resourceServiceName,
-      @Value("${song.service.ref.name:song-service}") String songServiceName) {
+      @Value("${song.service.ref.name:song-service}") String songServiceName,
+      @Value("${resource.processed.exchange:resource.processed}") String resourceProcessedExchange,
+      @Value("${resource.processed.routing-key:resource.processed}") String resourceProcessedRoutingKey) {
     this.restTemplate = restTemplate;
     this.retryTemplate = retryTemplate;
+    this.rabbitTemplate = rabbitTemplate;
     this.resourceServiceName = resourceServiceName;
     this.songServiceName = songServiceName;
+    this.resourceProcessedExchange = resourceProcessedExchange;
+    this.resourceProcessedRoutingKey = resourceProcessedRoutingKey;
   }
 
   public void saveSongMetadata(Long resourceId, SongDto songMetadata) {
@@ -62,5 +76,15 @@ public class CommunicationService {
           "Resource Service returned an empty resource for ID " + resourceId);
     }
     return resourceData;
+  }
+
+  public void notifyResourceProcessed(Long resourceId) {
+    Message message = MessageBuilder.withBody(Long.toString(resourceId).getBytes(StandardCharsets.UTF_8))
+        .setContentType("text/plain")
+        .build();
+    retryTemplate.execute(context -> {
+      rabbitTemplate.send(resourceProcessedExchange, resourceProcessedRoutingKey, message);
+      return null;
+    });
   }
 }

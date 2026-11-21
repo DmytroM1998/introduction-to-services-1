@@ -1,7 +1,10 @@
 package com.epam.resource.contract;
 
 import com.epam.resource.entity.ResourceEntity;
+import com.epam.resource.dto.StorageDetails;
+import com.epam.resource.entity.StorageType;
 import com.epam.resource.repository.ResourceRepository;
+import com.epam.resource.service.StorageLocationService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.amqp.core.Message;
@@ -38,7 +41,6 @@ import static org.mockito.Mockito.when;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
         "eureka.client.enabled=false",
-        "resource.storage.bucket=resources",
         "resource.rabbitmq.exchange=resource.uploaded"
 })
 @AutoConfigureMessageVerifier
@@ -59,6 +61,9 @@ public abstract class BaseContractTest {
 
     @MockitoBean
     RestTemplate restTemplate;
+
+    @MockitoBean
+    StorageLocationService storageLocationService;
 
     @Autowired
     @Qualifier("resource.uploaded")
@@ -86,6 +91,11 @@ public abstract class BaseContractTest {
             saved.setId(42L);
             return saved;
         });
+        StorageDetails staging = new StorageDetails();
+        staging.setStorageType(StorageType.STAGING);
+        staging.setBucket("resources-staging");
+        staging.setPath("resources/staging/");
+        when(storageLocationService.getStorage(StorageType.STAGING)).thenReturn(staging);
 
         // Bridge the actual AMQP output into the contract verifier, without a broker.
         doAnswer(call -> {

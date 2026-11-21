@@ -22,6 +22,7 @@ public class ResourceMessageListener implements Consumer<Long> {
     byte[] resourceData = communicationService.requestResourceBinary(resourceId);
     SongDto songMetadata = resourceMetadataService.processResourceMetadata(resourceId, resourceData);
     communicationService.saveSongMetadata(resourceId, songMetadata);
+    communicationService.notifyResourceProcessed(resourceId);
     
     log.info("Completed processing for resource ID {}", resourceId);
   }

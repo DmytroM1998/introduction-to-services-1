@@ -1,3 +1,11 @@
+### Storage Service
+
+According to Task 6, Storage manages storage **types**. The design assumes only pre-created buckets may be used, so creating a custom S3 bucket, if one is missing, is optional.
+
+STAGING and PERMANENT types are the only ones the logic in Resource Service on creating a new resource is built around, which makes additional storage types optional too. For this reason, enum values are exposed in Storage and Resource services, instead of plain String values.
+
+To provide Storage more sense, I made Resource Service to follow the provided StorageDetails.path, so the PERMANENT bucket may store files under different paths.
+
 
 ### Installation
 
