@@ -34,6 +34,11 @@ curl -s -H 'Content-Type: application/json' \
 
 ### Installation
 
+#### Places of interest
+
+Eureka status: http://localhost:8761/
+Grafana: http://localhost:3000/login
+
 ## LocalStack token
 LocalStack requires a Personal Auth Token for usage.
 
