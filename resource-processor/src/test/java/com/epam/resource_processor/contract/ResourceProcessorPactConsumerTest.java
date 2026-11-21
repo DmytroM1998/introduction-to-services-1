@@ -8,6 +8,7 @@ import au.com.dius.pact.core.model.PactSpecVersion;
 import au.com.dius.pact.core.model.RequestResponsePact;
 import au.com.dius.pact.core.model.annotations.Pact;
 import com.epam.resource_processor.service.CommunicationService;
+import com.epam.resource_processor.tracing.TraceContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
@@ -61,6 +62,7 @@ class ResourceProcessorPactConsumerTest {
             restTemplate, 
             retryTemplate, 
             Mockito.mock(RabbitTemplate.class),
+            new TraceContext("resource-processor"),
             mockHost, 
             "dummy-song-service", 
             "resource.processed", 

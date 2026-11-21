@@ -1,0 +1,913 @@
+{
+  "apiVersion": "dashboard.grafana.app/v2",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "adws6z6"
+  },
+  "spec": {
+    "annotations": [
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": true,
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "query": {
+            "datasource": {
+              "name": "-- Grafana --"
+            },
+            "group": "grafana",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      }
+    ],
+    "cursorSync": "Off",
+    "editable": true,
+    "elements": {
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "value",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"jvm_memory_used\" AND area:\"heap\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Memory Avg Usage"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": true,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "includeRuntimeFields": false,
+                        "metrics": [
+                          {
+                            "field": "value",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"jvm_memory_max\" AND area:\"heap\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Memory Max Usage"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "",
+          "id": 1,
+          "links": [],
+          "title": "Memory Usage Panel",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "line"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 350000000
+                      }
+                    ]
+                  },
+                  "unit": "bytes"
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.6"
+          }
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "count",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"jvm_gc_pause\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Pause Count"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "sum",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"jvm_gc_pause\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Total Pause Time"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "GC pause count and total pause time (milliseconds), grouped by service.",
+          "id": 2,
+          "links": [],
+          "title": "GC Pause Activity",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "line"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 350000000
+                      }
+                    ]
+                  },
+                  "unit": "bytes"
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.6"
+          }
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "value",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"jvm_threads_live\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Live Threads"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "value",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"jvm_threads_daemon\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Daemon Threads"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "Live and daemon JVM thread counts, grouped by service.",
+          "id": 3,
+          "links": [],
+          "title": "Live Threads",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "line"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 350000000
+                      }
+                    ]
+                  },
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.6"
+          }
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "value",
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"process_cpu_usage\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "Process CPU"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "PC32C3999EA6840E3"
+                      },
+                      "group": "elasticsearch",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "alias": "",
+                        "bucketAggs": [
+                          {
+                            "field": "application",
+                            "id": "3",
+                            "settings": {
+                              "min_doc_count": "1",
+                              "order": "desc",
+                              "orderBy": "_term",
+                              "size": "10"
+                            },
+                            "type": "terms"
+                          },
+                          {
+                            "field": "@timestamp",
+                            "id": "2",
+                            "settings": {
+                              "interval": "10s"
+                            },
+                            "type": "date_histogram"
+                          }
+                        ],
+                        "editorType": "builder",
+                        "metrics": [
+                          {
+                            "field": "value",
+                            "hide": true,
+                            "id": "1",
+                            "type": "sum"
+                          }
+                        ],
+                        "preserveQuery": false,
+                        "query": "name:\"system_cpu_usage\"",
+                        "queryType": "lucene",
+                        "timeField": "@timestamp"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "System CPU"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "Process and system CPU usage; values are ratios from 0 to 1.",
+          "id": 4,
+          "links": [],
+          "title": "CPU Usage",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "line"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 350000000
+                      }
+                    ]
+                  },
+                  "unit": "percentunit"
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.2.6"
+          }
+        }
+      }
+    },
+    "layout": {
+      "kind": "GridLayout",
+      "spec": {
+        "items": [
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-1"
+              },
+              "height": 8,
+              "width": 12,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-2"
+              },
+              "height": 8,
+              "width": 12,
+              "x": 12,
+              "y": 0
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-3"
+              },
+              "height": 8,
+              "width": 12,
+              "x": 0,
+              "y": 8
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-4"
+              },
+              "height": 8,
+              "width": 12,
+              "x": 12,
+              "y": 8
+            }
+          }
+        ]
+      }
+    },
+    "links": [],
+    "liveNow": false,
+    "preferences": {
+      "layout": {
+        "kind": "GridLayout",
+        "spec": {
+          "items": []
+        }
+      }
+    },
+    "preload": false,
+    "tags": [],
+    "timeSettings": {
+      "autoRefresh": "",
+      "autoRefreshIntervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "fiscalYearStartMonth": 0,
+      "from": "now-5m",
+      "hideTimepicker": false,
+      "timezone": "browser",
+      "to": "now"
+    },
+    "title": "Memory Usage",
+    "variables": []
+  }
+}
